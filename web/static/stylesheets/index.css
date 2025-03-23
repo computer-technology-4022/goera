@@ -32,7 +32,7 @@
 .primary_button {
   box-sizing: border-box;
   width: 100%;
-  background-color: #ff6308; 
+  background-color: #ff6308;
   color: #1d1e20;
   padding: 12px 24px;
   font-size: 1.15rem;
@@ -47,10 +47,42 @@
     border 0.3s ease;
 }
 
-
 .primary_button:hover {
   background-color: #1d1e20;
   color: #f0ffff;
   box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
   border: 2px solid #f0ffff;
+}
+.login_form {
+  width: 650px;
+  margin-top: 20px;
+}
+
+.form_group {
+  margin-bottom: 20px;
+}
+
+.form_label {
+  display: block;
+  color: azure;
+  font-family: "Roboto", sans-serif;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+
+.form_input {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-family: "Roboto", sans-serif;
+  border: 2px solid #ff6308;
+  border-radius: 3px;
+  background-color: #1d1e20;
+  color: azure;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+.form_input:focus {
+  border-color: #f0ffff;
 }

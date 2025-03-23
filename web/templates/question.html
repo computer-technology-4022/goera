@@ -3,8 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login - Goera</title>
+    <title>Question Detail - Goera</title>
     <link rel="stylesheet" href="../static/stylesheets/index.css" />
+    <link rel="stylesheet" href="../static/stylesheets/question.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -12,50 +13,74 @@
       rel="stylesheet"
     />
   </head>
-  <body class="body">
-    <div class="home_container">
-      <h1 style="text-align: center" class="home_heading">
-        <span style="color: #ff6308">Go</span>era
-      </h1>
-      <form class="login_form">
-        <div class="form_group">
-          <label for="username" class="form_label">Username</label>
-          <input
-            type="text"
-            id="username"
-            name="username"
-            class="form_input"
-            placeholder="Enter your username"
-            required
-          />
-        </div>
-        <div class="form_group">
-          <label for="password" class="form_label">Password</label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            class="form_input"
-            placeholder="Enter your password"
-            required
-          />
-        </div>
-        <button type="submit" class="primary_button">Login</button>
-      </form>
-      <div style="width: 100%; margin-top: 10px; text-align: center">
-        <p
-          style="
-            color: azure;
-            margin-top: 12px;
-            font-family: 'Roboto', sans-serif;
-          "
-        >
-          Don't have an account?
-          <a href="/signUp" style="color: #ff6308; text-decoration: none"
-            >Sign up</a
-          >
+  <body class="body_2">
+    <div class="home_container_2">
+      <!-- Question Title -->
+      <h2 class="question_detail_title">Two Sum</h2>
+
+      <!-- Question Statement -->
+      <div class="question_section">
+        <h3 class="section_title">Statement</h3>
+        <p class="section_content">
+          Given an array of integers <code>nums</code> and an integer
+          <code>target</code>, return indices of the two numbers such that they
+          add up to <code>target</code>. You may assume that each input would
+          have exactly one solution, and you may not use the same element twice.
+          You can return the answer in any order.
         </p>
       </div>
+
+      <!-- Time Limit -->
+      <div class="question_section">
+        <h3 class="section_title">Time Limit</h3>
+        <p class="section_content">1000 milliseconds</p>
+      </div>
+
+      <!-- Memory Limit -->
+      <div class="question_section">
+        <h3 class="section_title">Memory Limit</h3>
+        <p class="section_content">256 MB</p>
+      </div>
+
+      <!-- Input -->
+      <div class="question_section">
+        <h3 class="section_title">Input</h3>
+        <pre class="section_content code_block">
+nums = [2, 7, 11, 15]
+target = 9</pre
+        >
+      </div>
+
+      <!-- Expected Output -->
+      <div class="question_section">
+        <h3 class="section_title">Expected Output</h3>
+        <pre class="section_content code_block">[0, 1]</pre>
+      </div>
+
+      <!-- File Upload Section -->
+      <div class="question_section">
+        <h3 class="section_title">Upload Your Solution</h3>
+        <form id="uploadForm" class="upload_form">
+          <input
+            type="file"
+            id="solutionFile"
+            name="solutionFile"
+            class="file_input"
+            accept=".cpp,.java,.py,.js,.psd"
+            required
+          />
+          <button onsubmit="" type="submit" class="primary_button">
+            Submit
+          </button>
+        </form>
+      </div>
+
+      <!-- Back Button -->
+      <a href="/questions" style="text-decoration: none; color: inherit">
+        <div style="width: 100%; margin-top: 30px">
+          <button class="primary_button">Back to Problems</button>
+        </div>
+      </a>
     </div>
   </body>
 </html>

@@ -8,9 +8,20 @@
 
 .body {
   background-color: #1d1e20;
-  width: 100vw;
+  min-width: 100vw;
   position: relative;
-  height: 100vh;
+  min-height: 100vh;
+}
+
+.body_2 {
+  background-color: #1d1e20;
+  padding: 40px 0 40px 0;
+}
+
+.home_container_2 {
+  width: fit-content;
+  margin: auto;
+  width: 50%;
 }
 
 .home_container {
@@ -203,4 +214,45 @@
 .current_page {
   color: azure;
   font-family: "Roboto", sans-serif;
+}
+
+.upload_form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.file_input {
+  background-color: #2a2b2e;
+  color: azure;
+  padding: 12px;
+  border: 2px solid #ff6308;
+  border-radius: 5px;
+  font-family: "Roboto", sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.3s ease;
+}
+
+.file_input:focus {
+  border-color: #f0ffff;
+  outline: none;
+}
+
+.file_input::file-selector-button {
+  background-color: #ff6308;
+  color: #1d1e20;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 3px;
+  font-family: "Roboto", sans-serif;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.file_input::file-selector-button:hover {
+  background-color: #f0ffff;
+  color: #1d1e20;
 }

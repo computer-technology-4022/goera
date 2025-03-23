@@ -17,25 +17,26 @@
       <h1 class="home_heading">
         <span style="color: #ff6308">Go</span>era Problems
       </h1>
-
-      <div class="questions_container">
-        {{with .Questions}} {{range .}}
-        <div class="question_card">
-          <div class="question_header">
-            <h3 class="question_title">{{.Name}}</h3>
-            <span class="difficulty easy">Easy</span>
+      <a href="/question" style="text-decoration: none; color: inherit">
+        <div class="questions_container">
+          {{with .Questions}} {{range .}}
+          <div class="question_card">
+            <div class="question_header">
+              <h3 class="question_title">{{.Name}}</h3>
+              <span class="difficulty easy">Easy</span>
+            </div>
+            <div class="question_tags">
+              <span class="tag">Array</span>
+              <span class="tag">Hash Table</span>
+            </div>
+            <div class="question_stats">
+              <span class="stat">Solved: 45%</span>
+              <span class="stat">Submissions: 1.2M</span>
+            </div>
           </div>
-          <div class="question_tags">
-            <span class="tag">Array</span>
-            <span class="tag">Hash Table</span>
-          </div>
-          <div class="question_stats">
-            <span class="stat">Solved: 45%</span>
-            <span class="stat">Submissions: 1.2M</span>
-          </div>
+          {{end}} {{end}}
         </div>
-        {{end}} {{end}}
-      </div>
+      </a>
 
       <!-- Pagination -->
       <div class="pagination">

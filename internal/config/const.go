@@ -2,6 +2,6 @@ package config
 
 const (
 	ServerPort      = ":8080"
-	StaticRouterDir = "../web/static"
+	StaticRouterDir = "web/static"
 	StaticRouter    = "/static/"
 )

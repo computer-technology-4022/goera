@@ -20,7 +20,7 @@ func QuestionsHandler(w http.ResponseWriter, r *http.Request) {
 	pageStr := r.URL.Query().Get("page")
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
-		page = 1 // Default to page 1 if invalid or missing
+		page = 1
 	}
 	questions := []Question{
 		{Name: "abass"},
@@ -54,7 +54,7 @@ func QuestionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmpl := template.Must(template.New("questions.html").
-		Funcs(funcMap).ParseFiles("../web/templates/questions.html"))
+		Funcs(funcMap).ParseFiles("web/templates/questions.html"))
 
 	err = tmpl.Execute(w, data)
 	if err != nil {

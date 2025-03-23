@@ -13,5 +13,7 @@ func main() {
 	http.HandleFunc("/", handler.WelcomeHandler)
 	http.HandleFunc("/login", handler.LoginHandler)
 	http.HandleFunc("/signUp", handler.SignUpHandler)
+	http.HandleFunc("/questions", handler.QuestionsHandler)
+	http.HandleFunc("/question", handler.QuestionHandler)
 	http.ListenAndServe(config.ServerPort, nil)
 }

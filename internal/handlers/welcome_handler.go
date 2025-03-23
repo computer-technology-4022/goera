@@ -6,7 +6,7 @@ import (
 )
 
 func WelcomeHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("../web/templates/index.html")
+	tmpl, err := template.ParseFiles("web/templates/index.html")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

@@ -12,5 +12,6 @@ func main() {
 		StripPrefix(config.StaticRouter, http.FileServer(http.Dir(config.StaticRouterDir))))
 	http.HandleFunc("/", handler.WelcomeHandler)
 	http.HandleFunc("/login", handler.LoginHandler)
+	http.HandleFunc("/signUp", handler.SignUpHandler)
 	http.ListenAndServe(config.ServerPort, nil)
 }

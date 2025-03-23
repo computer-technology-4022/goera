@@ -3,8 +3,8 @@ package main
 import (
 	"net/http"
 
-	"github.com/computer-technology-4022/quera-clone/internal/config"
-	handler "github.com/computer-technology-4022/quera-clone/internal/handlers"
+	"github.com/computer-technology-4022/goera/internal/config"
+	handler "github.com/computer-technology-4022/goera/internal/handlers"
 )
 
 func main() {

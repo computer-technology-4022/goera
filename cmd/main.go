@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/computer-technology-4022/goera/internal/config"
@@ -15,5 +16,6 @@ func main() {
 	http.HandleFunc("/signUp", handler.SignUpHandler)
 	http.HandleFunc("/questions", handler.QuestionsHandler)
 	http.HandleFunc("/question", handler.QuestionHandler)
+	fmt.Println("Server is running on http://localhost:8080")
 	http.ListenAndServe(config.ServerPort, nil)
 }

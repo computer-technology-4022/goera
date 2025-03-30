@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/computer-technology-4022/goera/internal/api"
+	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/config"
 	"github.com/computer-technology-4022/goera/internal/database"
 	handler "github.com/computer-technology-4022/goera/internal/handlers"
@@ -26,7 +27,7 @@ func main() {
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
-	// s.HandleFunc("/user/{ID}", auth.JWTMiddleware(api.UsersHandler)).Methods("GET", "POST")
+	s.HandleFunc("/user/{ID}", auth.JWTMiddleware(api.UsersHandler)).Methods("GET", "POST")
 
 	http.Handle("/", r)
 	http.ListenAndServe(config.ServerPort, nil)

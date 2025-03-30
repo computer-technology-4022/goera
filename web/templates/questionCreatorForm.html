@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create Question - Goera</title>
+    <link rel="stylesheet" href="/static/stylesheets/index.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Boldonse&family=Unbounded:wght@200..900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="body">
+    <div class="home_container">
+      <h1 class="home_heading">
+        <span style="color: #ff6308">Create</span> New Question
+      </h1>
+
+      <div class="form_scrollable">
+      <form class="question_form" action="/questions/create" method="POST">
+        <!-- Title Input -->
+        <div class="form_group">
+          <label class="form_label">Question Title</label>
+          <input
+            type="text"
+            name="title"
+            class="form_input"
+            placeholder="Enter question title"
+            required
+          />
+        </div>
+
+        <!-- Content Editor -->
+        <div class="form_group">
+          <label class="form_label">Question Content</label>
+          <textarea
+            name="content"
+            class="form_textarea"
+            rows="6"
+            placeholder="Describe the problem in detail..."
+            required
+          ></textarea>
+        </div>
+
+        <!-- Constraints -->
+        <div class="form_group">
+          <label class="form_label">Constraints</label>
+          <textarea
+            name="constraints"
+            class="form_textarea"
+            rows="3"
+            placeholder="List any constraints..."
+          ></textarea>
+        </div>
+
+        <!-- Sample Input/Output Container -->
+        <div class="form_group">
+          <label class="form_label">Sample Cases</label>
+          <div id="samples_container">
+            <div class="sample_pair">
+              <div class="form_columns">
+                <div class="form_group">
+                  <textarea
+                    name="sample_inputs[]"
+                    class="form_textarea"
+                    rows="2"
+                    placeholder="Sample input..."
+                  ></textarea>
+                </div>
+                <div class="form_group">
+                  <textarea
+                    name="sample_outputs[]"
+                    class="form_textarea"
+                    rows="2"
+                    placeholder="Sample output..."
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="secondary_button"
+            onclick="addSampleField()"
+            style="margin-top: 10px"
+          >
+            + Add Another Sample
+          </button>
+        </div>
+
+        <!-- Tags -->
+        <div class="form_group">
+          <label class="form_label">Tags</label>
+          <input
+            type="text"
+            name="tags"
+            class="form_input"
+            placeholder="Comma-separated tags (e.g., array, sorting)"
+          />
+        </div>
+
+        <!-- Submit Button -->
+        <div class="form_footer">
+          <button type="submit" class="primary_button">Save as Draft</button>
+        </div>
+      </form>
+      </div>
+    </div>
+
+    <script>
+      function addSampleField() {
+        const container = document.getElementById('samples_container');
+        const newPair = document.createElement('div');
+        newPair.className = 'sample_pair';
+        newPair.innerHTML = `
+          <div class="form_columns">
+            <div class="form_group">
+              <textarea
+                name="sample_inputs[]"
+                class="form_textarea"
+                rows="2"
+                placeholder="Sample input..."
+              ></textarea>
+            </div>
+            <div class="form_group">
+              <textarea
+                name="sample_outputs[]"
+                class="form_textarea"
+                rows="2"
+                placeholder="Sample output..."
+              ></textarea>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            class="remove_button"
+            onclick="this.parentElement.remove()"
+          >×</button>
+        `;
+        container.appendChild(newPair);
+      }
+    </script>
+  </body>
+</html>

@@ -16,6 +16,8 @@ func main() {
 	http.HandleFunc("/signUp", handler.SignUpHandler)
 	http.HandleFunc("/questions", handler.QuestionsHandler)
 	http.HandleFunc("/question", handler.QuestionHandler)
+	http.HandleFunc("/submissions", handler.SubmissionPageHandler)
+	http.HandleFunc("/createQuestion", handler.QuestionCreatorHandler)
 	fmt.Println("Server is running on http://localhost:8080")
 	http.ListenAndServe(config.ServerPort, nil)
 }

@@ -22,13 +22,13 @@ func main() {
 	r.HandleFunc("/signUp", handler.SignUpHandler)
 	r.HandleFunc("/questions", handler.QuestionsHandler)
 	r.HandleFunc("/question", handler.QuestionHandler)
-	fmt.Println("Server is running on http://localhost:8080")
-
+	
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
 	s.HandleFunc("/user/{ID}", auth.JWTMiddleware(api.UsersHandler)).Methods("GET", "POST")
-
+	
 	http.Handle("/", r)
+	fmt.Println("Server is running on http://localhost:5000")
 	http.ListenAndServe(config.ServerPort, nil)
 }

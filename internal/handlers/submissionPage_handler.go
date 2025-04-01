@@ -56,7 +56,7 @@ func SubmissionPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Pagination calculations
-	submissionsPerPage := 10
+	submissionsPerPage := 5
 	totalPages := (len(allSubmissions) + submissionsPerPage - 1) / submissionsPerPage
 	start := (page - 1) * submissionsPerPage
 	end := start + submissionsPerPage

@@ -264,22 +264,6 @@
   text-align: center;
 }
 
-.submissions_container {
-  width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.submission_card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  margin: 15px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .submission_info {
   flex-grow: 1;
@@ -436,3 +420,166 @@
   padding: 20px 0;
   margin: 0;
 }
+
+
+/* Profile Page Styles */
+.profile_header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.join_date {
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.stats_container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.stat_card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat_value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #ff6308;
+  margin: 0.5rem 0;
+}
+
+.admin_badge {
+  background: #ff6308;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8em;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+}
+
+.admin_section {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-top: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.role_control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+}
+
+.danger_button {
+  background: #ff4444;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.danger_button:hover {
+  background: #cc0000;
+}
+
+.back_link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: #666;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back_link:hover {
+  color: #ff6308;
+}
+
+/* Add this to your CSS file */
+
+.submissions_container {
+  max-height: 65vh; /* ADJUST THIS VALUE! Try 60vh, 70vh, 500px, etc. */
+  overflow-y: auto;  /* Enable vertical scrollbar only when needed */
+  padding-right: 8px; /* Optional: Adds space so scrollbar doesn't overlap status */
+  margin-bottom: 20px; /* Optional: Adds space between the list and pagination */
+}
+
+/* Optional: Remove bottom margin from the very last card inside the scrollable area */
+.submissions_container .submission_card:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Keep your existing styles for .submission_card, .pagination etc. --- */
+
+/* Example existing styles (make sure they are present) */
+.submission_card {
+  background-color: #fff; /* Or your card background */
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 15px; /* Spacing between cards */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* ... other card styles ... */
+}
+
+
+.scrollable_content {
+  /* Set a maximum height. Adjust the value (e.g., 70vh, 80vh, 500px) 
+     as needed based on your header size and desired layout. 
+     75vh means 75% of the viewport height. */
+  max-height: 75vh; 
+
+  /* Enable vertical scrolling only when content overflows */
+  overflow-y: auto; 
+
+  /* Optional: Add some padding at the bottom if the scrollbar 
+     gets too close to the pagination */
+  padding-bottom: 20px; 
+
+  /* Optional: Add some padding on the right to prevent content
+     from touching the scrollbar if it appears */
+  padding-right: 10px; /* Adjust as needed */
+}
+
+
+/* Optional: Ensure body takes up height if needed for vh units, 
+   though often not strictly necessary if the parent isn't constrained */
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+/* Optional: If you want the header to be truly fixed at the top 
+   and the scrollable content to take the rest of the space using Flexbox
+   (more advanced layout restructuring might be needed) */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Make body fill the viewport height */
+}
+
+
+.home_container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* Allow container to grow */
+  /* overflow: hidden; /* Prevent body scroll */
+} 
+

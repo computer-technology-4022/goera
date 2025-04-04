@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -21,7 +22,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func SetTokenCookie(w http.ResponseWriter, tokenString string,
+func SetCookie(w http.ResponseWriter, tokenString string,
 	cookieName string, expirationTime time.Time) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     cookieName,
@@ -79,8 +80,8 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 	return nil, errors.New("invalid token")
 }
 
-func Middleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var userID uint
 		var hasValidToken bool
 
@@ -105,8 +106,22 @@ func Middleware(next http.HandlerFunc) http.HandlerFunc {
 			}
 		}
 
-		if isProtected(r.URL.Path, config.ProtectedPrefixes) && !hasValidToken {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		path := r.URL.Path
+
+		if isProtected(path, config.ProtectedPrefixes) && !hasValidToken {
+			if strings.HasPrefix(path, "/api") {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			// originalURL := r.URL.String()
+			// http.SetCookie(w, &http.Cookie{
+			// 	Name:     "redirect_url",
+			// 	Value:    originalURL,
+			// 	Path:     "/",
+			// 	HttpOnly: true,
+			// })
+
+			http.Redirect(w, r, "/login?error=unauthorized", http.StatusFound)
 			return
 		}
 
@@ -116,10 +131,11 @@ func Middleware(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		next.ServeHTTP(w, r)
-	}
+	})
 }
 
 func isProtected(path string, protectedPrefixes []string) bool {
+	log.Printf("Checking path: %s against prefixes: %v", path, protectedPrefixes)
 	for _, prefix := range protectedPrefixes {
 		if strings.HasPrefix(path, prefix) {
 			return true

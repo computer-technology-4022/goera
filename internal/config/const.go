@@ -10,6 +10,7 @@ var ProtectedPrefixes = []string{
 	"/questions",
 	"/profile",
 	"/question",
+	"/api/user",
 	"/submissions",
 	"/createQuestion",
 }

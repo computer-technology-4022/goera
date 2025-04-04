@@ -43,7 +43,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	expirationTime := time.Now().Add(168 * time.Hour)
-	auth.SetTokenCookie(w, token, "token", expirationTime)
+	auth.SetCookie(w, token, "token", expirationTime)
 
 	user.Password = ""
 	w.Header().Set("Content-Type", "application/json")

@@ -13,12 +13,12 @@ import (
 )
 
 func main() {
-	
 
 	database.InitDB()
 	r := mux.NewRouter()
-	r.Handle(config.StaticRouter, http.
-		StripPrefix(config.StaticRouter, http.FileServer(http.Dir(config.StaticRouterDir))))
+	r.Use(auth.Middleware)
+	fs := http.FileServer(http.Dir(config.StaticRouterDir))
+	r.PathPrefix(config.StaticRouter).Handler(http.StripPrefix(config.StaticRouter, fs))
 	r.HandleFunc("/", handler.WelcomeHandler)
 	r.HandleFunc("/login", handler.LoginHandler)
 	r.HandleFunc("/signUp", handler.SignUpHandler)
@@ -29,13 +29,8 @@ func main() {
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
-<<<<<<< Updated upstream
-	s.HandleFunc("/user/{ID}", auth.JWTMiddleware(api.UsersHandler)).Methods("GET", "POST")
+	s.HandleFunc("/user/{ID}", api.UsersHandler).Methods("GET", "POST")
 
-=======
-	s.HandleFunc("/user/{ID}", auth.Middleware(api.UsersHandler)).Methods("GET", "POST")
-	
->>>>>>> Stashed changes
 	http.Handle("/", r)
 	http.ListenAndServe(config.ServerPort, nil)
 }

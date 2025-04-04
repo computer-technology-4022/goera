@@ -65,6 +65,70 @@
   box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
   border: 2px solid #f0ffff;
 }
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  background-color: #1d1e20;
+  position: fixed;
+  padding: 30px 20px;
+  border-right: 1px solid #3d3e42;
+}
+
+.sidebar-logo {
+  letter-spacing: 3px;
+  color: azure;
+  font-size: 1.8rem;
+  font-family: "Boldonse", system-ui;
+  margin-bottom: 40px;
+}
+
+.sidebar-nav {
+  list-style: none;
+}
+
+.sidebar-nav li {
+  margin-bottom: 15px;
+}
+
+.sidebar-nav a {
+  color: azure;
+  text-decoration: none;
+  font-family: "Roboto", sans-serif;
+  font-size: 1.1rem;
+  display: block;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+  background-color: #ff6308;
+  color: #1d1e20;
+}
+
+/* Adjust main content to account for sidebar */
+.main-content {
+  margin-left: 250px;
+  width: calc(100% - 250px);
+  padding: 20px;
+}
+
+/* Update existing styles to work with sidebar */
+.home_container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.body {
+  background-color: #1d1e20;
+  height: 100vh;
+  overflow-y: auto; /* Allow scrolling */
+}
+
 .login_form {
   width: 650px;
   margin-top: 20px;

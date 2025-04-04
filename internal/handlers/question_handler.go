@@ -27,7 +27,7 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 	funcMap := template.FuncMap{}
 
 	tmpl := template.Must(template.New("question.html").
-		Funcs(funcMap).ParseFiles("web/templates/question.html"))
+		Funcs(funcMap).ParseFiles("web/templates/question.html", "web/templates/base.html"))
 
 	err := tmpl.Execute(w, data)
 	if err != nil {

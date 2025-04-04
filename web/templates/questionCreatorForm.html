@@ -6,7 +6,8 @@
     <title>Create Question - Goera</title>
     <!-- Assuming your CSS paths are correct relative to where this HTML will be served -->
     <link rel="stylesheet" href="/static/stylesheets/index.css" />
-    <link rel="stylesheet" href="/static/stylesheets/question_create.css" /> <!-- Suggest using a specific CSS if needed -->
+    <link rel="stylesheet" href="/static/stylesheets/question_create.css" />
+    <!-- Suggest using a specific CSS if needed -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,15 +15,22 @@
       rel="stylesheet"
     />
   </head>
-  <body class="body"> <!-- Consider a specific class like body_create -->
-    <div class="home_container"> <!-- Consider a specific class like create_container -->
+  <body class="body">
+    <div class="sidebar">
+      <h1 class="sidebar-logo"><span style="color: #ff6308">Go</span>era</h1>
+      <ul class="sidebar-nav">
+        <li><a href="/questions">Problems</a></li>
+        <li><a href="/submissions">Submissions</a></li>
+        <li><a href="/profile/2">Profile</a></li>
+      </ul>
+    </div>
+    <div class="home_container">
       <h1 class="home_heading">
         <span style="color: #ff6308">Create</span> New Question
       </h1>
 
       <div class="form_scrollable">
         <form class="question_form" action="/questions/create" method="POST">
-
           <!-- Question Title -->
           <div class="form_group">
             <label for="title" class="form_label">Question Title</label>
@@ -51,37 +59,41 @@
 
           <!-- Time Limit -->
           <div class="form_group">
-              <label for="time_limit" class="form_label">Time Limit (ms)</label>
-              <input
-                type="number"
-                id="time_limit"
-                name="time_limit_ms"
-                class="form_input"
-                placeholder="e.g., 1000"
-                min="100"
-                step="100"
-                required
-              />
+            <label for="time_limit" class="form_label">Time Limit (ms)</label>
+            <input
+              type="number"
+              id="time_limit"
+              name="time_limit_ms"
+              class="form_input"
+              placeholder="e.g., 1000"
+              min="100"
+              step="100"
+              required
+            />
           </div>
 
           <!-- Memory Limit -->
           <div class="form_group">
-              <label for="memory_limit" class="form_label">Memory Limit (MB)</label>
-              <input
-                type="number"
-                id="memory_limit"
-                name="memory_limit_mb"
-                class="form_input"
-                placeholder="e.g., 256"
-                min="32"
-                step="32"
-                required
-              />
+            <label for="memory_limit" class="form_label"
+              >Memory Limit (MB)</label
+            >
+            <input
+              type="number"
+              id="memory_limit"
+              name="memory_limit_mb"
+              class="form_input"
+              placeholder="e.g., 256"
+              min="32"
+              step="32"
+              required
+            />
           </div>
 
           <!-- Constraints -->
           <div class="form_group">
-            <label for="constraints" class="form_label">Constraints (Optional)</label>
+            <label for="constraints" class="form_label"
+              >Constraints (Optional)</label
+            >
             <textarea
               id="constraints"
               name="constraints"
@@ -96,24 +108,44 @@
           <!-- Example Input/Output Container -->
           <div class="form_group">
             <label class="form_label">Example Input/Output</label>
-            <p style="font-size: 0.85em; color: #666; margin-top: -5px; margin-bottom: 10px;">Provide at least one example. Use newline characters carefully for formatting.</p>
+            <p
+              style="
+                font-size: 0.85em;
+                color: #666;
+                margin-top: -5px;
+                margin-bottom: 10px;
+              "
+            >
+              Provide at least one example. Use newline characters carefully for
+              formatting.
+            </p>
             <div id="samples_container">
               <!-- Initial Sample Pair -->
               <div class="sample_pair">
                 <div class="form_columns">
                   <div class="form_group">
-                    <label for="sample_input_1" class="form_label" style="font-size: 0.8em;">Example Input 1</label>
+                    <label
+                      for="sample_input_1"
+                      class="form_label"
+                      style="font-size: 0.8em"
+                      >Example Input 1</label
+                    >
                     <textarea
                       id="sample_input_1"
                       name="sample_inputs[]"
                       class="form_textarea"
                       rows="3"
                       placeholder="Input for the first example..."
-                      required  
+                      required
                     ></textarea>
                   </div>
                   <div class="form_group">
-                    <label for="sample_output_1" class="form_label" style="font-size: 0.8em;">Example Output 1</label>
+                    <label
+                      for="sample_output_1"
+                      class="form_label"
+                      style="font-size: 0.8em"
+                      >Example Output 1</label
+                    >
                     <textarea
                       id="sample_output_1"
                       name="sample_outputs[]"
@@ -151,19 +183,21 @@
 
           <!-- Submit Button -->
           <div class="form_footer">
-            <button type="submit" class="primary_button">Create Question</button>
+            <button type="submit" class="primary_button">
+              Create Question
+            </button>
             <!-- Or keep "Save as Draft" if that's the workflow -->
           </div>
 
           <!-- Back Button -->
-      <!-- Assumes /questions is the correct URL for the problems list -->
-      <a href="/questions" style="text-decoration: none; color: inherit;">
-        <div style="width: 100%; margin-top: 30px;">
-          <button type="button" class="primary_button">Back to Problems</button>
-        </div>
-      </a>
-
-      
+          <!-- Assumes /questions is the correct URL for the problems list -->
+          <a href="/questions" style="text-decoration: none; color: inherit">
+            <div style="width: 100%; margin-top: 30px">
+              <button type="button" class="primary_button">
+                Back to Problems
+              </button>
+            </div>
+          </a>
         </form>
       </div>
     </div>
@@ -173,9 +207,9 @@
 
       function addSampleField() {
         sampleCounter++;
-        const container = document.getElementById('samples_container');
-        const newPair = document.createElement('div');
-        newPair.className = 'sample_pair';
+        const container = document.getElementById("samples_container");
+        const newPair = document.createElement("div");
+        newPair.className = "sample_pair";
         newPair.innerHTML = `
           <div class="form_columns">
             <div class="form_group">

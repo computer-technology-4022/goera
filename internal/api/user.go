@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
-	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
@@ -69,9 +69,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUserById(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["ID"]
-	log.Print(id)
+	id := r.Header.Get("userID")
 	if id == "" {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
 		return

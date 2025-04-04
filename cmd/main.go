@@ -29,7 +29,7 @@ func main() {
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
-	s.HandleFunc("/user/{ID}", api.UsersHandler).Methods("GET", "POST")
+	s.HandleFunc("/user", api.UsersHandler).Methods("GET", "POST")
 
 	http.Handle("/", r)
 	http.ListenAndServe(config.ServerPort, nil)

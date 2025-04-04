@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -85,6 +84,9 @@ func Middleware(next http.Handler) http.Handler {
 		var userID uint
 		var hasValidToken bool
 
+		path := r.URL.Path
+		isApiReq := strings.HasPrefix(path, "/api")
+
 		authHeader := r.Header.Get("Authorization")
 		if strings.HasPrefix(authHeader, "Bearer ") {
 			tokenString := authHeader[len("Bearer "):]
@@ -106,10 +108,8 @@ func Middleware(next http.Handler) http.Handler {
 			}
 		}
 
-		path := r.URL.Path
-
 		if isProtected(path, config.ProtectedPrefixes) && !hasValidToken {
-			if strings.HasPrefix(path, "/api") {
+			if isApiReq {
 				http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				return
 			}
@@ -125,8 +125,8 @@ func Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if hasValidToken {
-			ctx := context.WithValue(r.Context(), "userID", userID)
+		if hasValidToken && !isApiReq {
+			ctx := context.WithValue(r.Context(), userIDKey, userID)
 			r = r.WithContext(ctx)
 		}
 
@@ -135,7 +135,6 @@ func Middleware(next http.Handler) http.Handler {
 }
 
 func isProtected(path string, protectedPrefixes []string) bool {
-	log.Printf("Checking path: %s against prefixes: %v", path, protectedPrefixes)
 	for _, prefix := range protectedPrefixes {
 		if strings.HasPrefix(path, prefix) {
 			return true

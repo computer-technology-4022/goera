@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
+
+	"github.com/gorilla/mux"
 	// "strconv"
 )
 
@@ -11,6 +14,9 @@ type QuestionData struct {
 }
 
 func QuestionHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	fmt.Println("Question ID:", id)
 	// pageStr := r.URL.Query().Get("questionID")
 	question := Question{Name: "asd"}
 

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Submissions - Goera</title>
+    <link rel="stylesheet" href="/static/stylesheets/index.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Boldonse&family=Unbounded:wght@200..900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="body">
+    <div class="home_container">
+      <h1 class="home_heading">
+        <span style="color: #ff6308">My</span> Submissions
+      </h1>
+
+      <!-- Submissions List -->
+      <div class="submissions_container">
+        {{range .Submissions}}
+        <div class="submission_card">
+          <div class="submission_info">
+            <h3 class="question_title"><span style="color: #000000">{{.QuestionName}}</span> /h3>
+            <span class="submission_date">{{.SubmissionDate.Format "2006-01-02 15:04"}}</span>
+          </div>
+          <span class="status {{.Status | statusToClass}}">
+            {{.Status | statusToString}}
+          </span>
+        </div>
+        {{end}}
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        {{if gt .Page 1}}
+        <a href="/submissions?page={{sub .Page 1}}">
+          <button class="pagination_button">Previous</button>
+        </a>
+        {{else}}
+        <button class="pagination_button" disabled>Previous</button>
+        {{end}}
+
+        <span class="current_page">Page {{.Page}} of {{.TotalPages}}</span>
+
+        {{if lt .Page .TotalPages}}
+        <a href="/submissions?page={{add .Page 1}}">
+          <button class="pagination_button">Next</button>
+        </a>
+        {{else}}
+        <button class="pagination_button" disabled>Next</button>
+        {{end}}
+      </div>
+    </div>
+  </body>
+</html>

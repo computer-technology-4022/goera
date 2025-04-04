@@ -11,6 +11,7 @@
   min-width: 100vw;
   position: relative;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 .body_2 {
@@ -64,6 +65,70 @@
   box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
   border: 2px solid #f0ffff;
 }
+
+/* Sidebar */
+.sidebar {
+  width: 250px;
+  height: 100vh;
+  background-color: #1d1e20;
+  position: fixed;
+  padding: 30px 20px;
+  border-right: 1px solid #3d3e42;
+}
+
+.sidebar-logo {
+  letter-spacing: 3px;
+  color: azure;
+  font-size: 1.8rem;
+  font-family: "Boldonse", system-ui;
+  margin-bottom: 40px;
+}
+
+.sidebar-nav {
+  list-style: none;
+}
+
+.sidebar-nav li {
+  margin-bottom: 15px;
+}
+
+.sidebar-nav a {
+  color: azure;
+  text-decoration: none;
+  font-family: "Roboto", sans-serif;
+  font-size: 1.1rem;
+  display: block;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+  background-color: #ff6308;
+  color: #1d1e20;
+}
+
+/* Adjust main content to account for sidebar */
+.main-content {
+  margin-left: 250px;
+  width: calc(100% - 250px);
+  padding: 20px;
+}
+
+/* Update existing styles to work with sidebar */
+.home_container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.body {
+  background-color: #1d1e20;
+  height: 100vh;
+  overflow-y: auto; /* Allow scrolling */
+}
+
 .login_form {
   width: 650px;
   margin-top: 20px;
@@ -255,4 +320,358 @@
 .file_input::file-selector-button:hover {
   background-color: #f0ffff;
   color: #1d1e20;
+}
+
+/* Submission Page Styles */
+.submission_stats {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.submission_info {
+  flex-grow: 1;
+}
+
+.submission_date {
+  color: #666;
+  font-size: 0.9em;
+}
+
+.status {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9em;
+}
+
+/* Status Colors */
+.status.pending {
+  background: #ffd700;
+  color: #000;
+}
+.status.ok {
+  background: #4caf50;
+  color: #fff;
+}
+.status.compile-error {
+  background: #f44336;
+  color: #fff;
+}
+.status.wrong-answer {
+  background: #ff5722;
+  color: #fff;
+}
+.status.memory-limit {
+  background: #9c27b0;
+  color: #fff;
+}
+.status.time-limit {
+  background: #2196f3;
+  color: #fff;
+}
+.status.runtime-error {
+  background: #607d8b;
+  color: #fff;
+}
+
+/* Create Question Form Styles */
+.question_form {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #2a2b2e;
+  border-radius: 5px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form_group {
+  margin-bottom: 1.5rem;
+}
+
+.form_label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: white;
+}
+
+.form_input,
+.form_textarea,
+.form_select {
+  width: 100%;
+  padding: 10px;
+  background-color: transparent;
+  border: 1px solid #ddd;
+  color: white;
+  border-radius: 8px;
+  font-family: "Unbounded", sans-serif;
+  font-size: 14px;
+  transition: border-color 0.3s ease;
+}
+
+.form_input:focus,
+.form_textarea:focus,
+.form_select:focus {
+  outline: none;
+  border-color: #ff6308;
+}
+
+.form_textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.form_columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.form_select {
+  appearance: none;
+  background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")
+    no-repeat right 0.75rem center/16px 16px;
+  padding-right: 2.5rem;
+}
+
+.form_footer {
+  margin-top: 2rem;
+  text-align: center;
+}
+
+/* Sample Cases Styles */
+.sample_pair {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 10px;
+  border-radius: 8px;
+  background: #f8f8f8;
+}
+
+.remove_button {
+  position: absolute;
+  right: -10px;
+  top: -10px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: #ff4444;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+}
+
+.remove_button:hover {
+  background: #cc0000;
+}
+
+.secondary_button {
+  background: #f0f0f0;
+  color: #333;
+  border: 2px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.secondary_button:hover {
+  background: #e0e0e0;
+  border-color: #ccc;
+}
+
+.home_container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.form_scrollable {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px 20px;
+}
+
+/* Keep header fixed */
+.home_heading {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 20px 0;
+  margin: 0;
+}
+
+/* Profile Page Styles */
+.profile_header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.join_date {
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.stats_container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.stat_card {
+  color: white;
+  background-color: #2a2b2e;
+  border-radius: 5px;
+  padding: 20px;
+  border: 1px solid #3d3e42;
+  transition: transform 0.2s ease;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stat_value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  color: #ff6308;
+  margin: 0.5rem 0;
+}
+
+.admin_badge {
+  background: #ff6308;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8em;
+  vertical-align: middle;
+  margin-left: 0.5rem;
+}
+
+.admin_section {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-top: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.role_control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f8f8;
+  border-radius: 8px;
+}
+
+.danger_button {
+  background: #ff4444;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.danger_button:hover {
+  background: #cc0000;
+}
+
+.back_link {
+  display: inline-block;
+  margin-bottom: 1rem;
+  color: #666;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back_link:hover {
+  color: #ff6308;
+}
+
+/* Add this to your CSS file */
+
+.submissions_container {
+  background-color: #1d1e20;
+  max-height: 65vh; /* ADJUST THIS VALUE! Try 60vh, 70vh, 500px, etc. */
+  overflow-y: auto; /* Enable vertical scrollbar only when needed */
+  padding-right: 8px; /* Optional: Adds space so scrollbar doesn't overlap status */
+  margin-bottom: 20px; /* Optional: Adds space between the list and pagination */
+}
+
+/* Optional: Remove bottom margin from the very last card inside the scrollable area */
+.submissions_container .submission_card:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Keep your existing styles for .submission_card, .pagination etc. --- */
+
+/* Example existing styles (make sure they are present) */
+.submission_card {
+  background-color: #2a2b2e;
+  border-radius: 5px;
+  padding: 20px;
+  border: 1px solid #3d3e42;
+  transition: transform 0.2s ease;
+  margin-bottom: 15px; /* Spacing between cards */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  /* ... other card styles ... */
+}
+
+.submission_card:hover {
+  transform: translateX(5px);
+}
+
+.scrollable_content {
+  /* Set a maximum height. Adjust the value (e.g., 70vh, 80vh, 500px) 
+     as needed based on your header size and desired layout. 
+     75vh means 75% of the viewport height. */
+  max-height: 75vh;
+
+  /* Enable vertical scrolling only when content overflows */
+  overflow-y: auto;
+
+  /* Optional: Add some padding at the bottom if the scrollbar 
+     gets too close to the pagination */
+  padding-bottom: 20px;
+
+  /* Optional: Add some padding on the right to prevent content
+     from touching the scrollbar if it appears */
+  padding-right: 10px; /* Adjust as needed */
+}
+
+/* Optional: Ensure body takes up height if needed for vh units, 
+   though often not strictly necessary if the parent isn't constrained */
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+/* Optional: If you want the header to be truly fixed at the top 
+   and the scrollable content to take the rest of the space using Flexbox
+   (more advanced layout restructuring might be needed) */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Make body fill the viewport height */
+}
+
+.home_container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* Allow container to grow */
+  /* overflow: hidden; /* Prevent body scroll */
 }

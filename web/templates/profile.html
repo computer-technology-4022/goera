@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{.Username}} Profile - Goera</title>
+    <link rel="stylesheet" href="/static/stylesheets/index.css" />
+    <!-- Add any specific profile CSS if needed -->
+    <!-- <link rel="stylesheet" href="/static/stylesheets/profile.css" /> -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Boldonse&family=Unbounded:wght@200..900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="body">
+    <div class="sidebar">
+      <h1 class="sidebar-logo"><span style="color: #ff6308">Go</span>era</h1>
+      <ul class="sidebar-nav">
+        <li><a href="/questions">Problems</a></li>
+        <li><a href="/submissions">Submissions</a></li>
+        <li><a href="/profile/2">Profile</a></li>
+      </ul>
+    </div>
+    <div class="home_container" style="height: fit-content">
+      <div class="profile_header">
+        <h1 class="home_heading">
+          <span style="color: #ff6308">{{.Username}}</span>'s Profile {{if
+          .IsAdmin}}<span class="admin_badge">ADMIN</span>{{end}}
+        </h1>
+        <p class="join_date">
+          Member since {{.JoinDate.Format "January 2006"}}
+        </p>
+      </div>
+
+      <!-- Statistics Section -->
+      <div class="stats_container">
+        <div class="stat_card">
+          <h3>Attempted</h3>
+          <p class="stat_value">{{.TotalAttempted}}</p>
+        </div>
+        <div class="stat_card">
+          <h3>Solved</h3>
+          <p class="stat_value">{{.TotalSolved}}</p>
+        </div>
+        <div class="stat_card">
+          <h3>Success Rate</h3>
+          <p class="stat_value">{{.SuccessRate}}%</p>
+        </div>
+      </div>
+
+      <!-- Admin Controls (Visible only to admins viewing another profile OR self) -->
+      {{if .IsViewerAdmin}}
+      <div class="admin_section">
+        <h2>Admin Management</h2>
+        <form action="/admin/toggle-role" method="POST">
+          <input type="hidden" name="userID" value="{{.UserID}}" />
+          <div class="role_control">
+            <p>
+              Current Role: {{if .IsAdmin}}Administrator{{else}}Regular
+              User{{end}}
+            </p>
+            <button
+              type="submit"
+              class="{{if .IsAdmin}}danger_button primary_button{{else}}primary_button{{end}}"
+            >
+              {{if .IsAdmin}}Revoke Admin Role{{else}}Grant Admin Role{{end}}
+            </button>
+          </div>
+        </form>
+      </div>
+      {{end}}
+
+      <!-- Back Button (New Style) -->
+      <a href="/questions" style="text-decoration: none; color: inherit">
+        <div style="width: 100%; margin-top: 30px">
+          <!-- Adjust margin-top as needed -->
+          <button type="button" class="primary_button">Back to Problems</button>
+        </div>
+      </a>
+    </div>
+    <!-- End of home_container -->
+  </body>
+</html>

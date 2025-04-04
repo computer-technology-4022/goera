@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
+	utils "github.com/computer-technology-4022/goera/internal/util"
 )
 
 type loginRequest struct {
@@ -45,12 +47,36 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auth.SetTokenCookie(w, token, "token", expirationTime)
+	utils.SetCookie(w, token, "token", expirationTime)
 
 	user.Password = ""
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"user":  user,
-		"token": token,
+		"user": user,
+		// "token": token,
 	})
 }
+
+// func LoginHandler(w http.ResponseWriter, r *http.Request) {
+//     // Check for error message
+//     errorMsg := ""
+//     if r.URL.Query().Get("error") == "unauthorized" {
+//         errorMsg = "Please login to access that page"
+//     }
+
+//     // Check for redirect URL
+//     redirectURL := "/" // Default redirect after login
+//     if cookie, err := r.Cookie("redirect_url"); err == nil {
+//         redirectURL = cookie.Value
+//     }
+
+//     // Your existing login logic here
+//     // When login is successful, redirect to the original URL:
+//     http.SetCookie(w, &http.Cookie{
+//         Name:   "redirect_url",
+//         Value:  "",
+//         Path:   "/",
+//         MaxAge: -1, // Delete the cookie
+//     })
+//     http.Redirect(w, r, redirectURL, http.StatusFound)
+// }

@@ -8,6 +8,7 @@ import (
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
+	utils "github.com/computer-technology-4022/goera/internal/util"
 )
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -43,12 +44,12 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	expirationTime := time.Now().Add(168 * time.Hour)
-	auth.SetTokenCookie(w, token, "token", expirationTime)
+	utils.SetCookie(w, token, "token", expirationTime)
 
 	user.Password = ""
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"user":  user,
-		"token": token,
+		"user": user,
+		// "token": token,
 	})
 }

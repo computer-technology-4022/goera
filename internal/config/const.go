@@ -5,3 +5,12 @@ const (
 	StaticRouterDir = "web/static"
 	StaticRouter    = "/static/"
 )
+
+var ProtectedPrefixes = []string{
+	"/questions",
+	"/profile",
+	"/question",
+	"/api/user",
+	"/submissions",
+	"/createQuestion",
+}

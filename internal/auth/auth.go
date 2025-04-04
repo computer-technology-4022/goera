@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/computer-technology-4022/goera/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -26,10 +27,10 @@ func SetTokenCookie(w http.ResponseWriter, tokenString string,
 		Name:     cookieName,
 		Value:    tokenString,
 		Expires:  expirationTime,
-		HttpOnly: true,                   
-		Secure:   false,                 
-		Path:     "/",                 
-		SameSite: http.SameSiteStrictMode, 
+		HttpOnly: true,
+		Secure:   false,
+		Path:     "/",
+		SameSite: http.SameSiteStrictMode,
 	})
 }
 
@@ -44,7 +45,7 @@ func CheckPasswordHash(password, hash string) bool {
 }
 
 func GenerateJWT(userID uint) (string, error) {
-	expirationTime := time.Now().Add(168 * time.Hour) 
+	expirationTime := time.Now().Add(168 * time.Hour)
 	claims := &Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -78,27 +79,51 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 	return nil, errors.New("invalid token")
 }
 
-func JWTMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func Middleware(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var userID uint
+		var hasValidToken bool
+
 		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString := authHeader[len("Bearer "):]
+			claims, err := ValidateJWT(tokenString)
+			if err == nil {
+				userID = claims.UserID
+				hasValidToken = true
+			}
+		}
+
+		if !hasValidToken {
+			cookie, err := r.Cookie("token")
+			if err == nil {
+				claims, err := ValidateJWT(cookie.Value)
+				if err == nil {
+					userID = claims.UserID
+					hasValidToken = true
+				}
+			}
+		}
+
+		if isProtected(r.URL.Path, config.ProtectedPrefixes) && !hasValidToken {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		if !strings.HasPrefix(authHeader, "Bearer ") {
-			http.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
-			return
+		if hasValidToken {
+			ctx := context.WithValue(r.Context(), "userID", userID)
+			r = r.WithContext(ctx)
 		}
 
-		tokenString := authHeader[len("Bearer "):]
-		claims, err := ValidateJWT(tokenString)
-		if err != nil {
-			http.Error(w, "Invalid token: "+err.Error(), http.StatusUnauthorized)
-			return
-		}
-
-		ctx := context.WithValue(r.Context(), "userID", claims.UserID)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	}
+}
+
+func isProtected(path string, protectedPrefixes []string) bool {
+	for _, prefix := range protectedPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
 }

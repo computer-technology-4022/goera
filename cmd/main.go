@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	
+
 	database.InitDB()
 	r := mux.NewRouter()
 	r.Handle(config.StaticRouter, http.
@@ -27,8 +29,13 @@ func main() {
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
+<<<<<<< Updated upstream
 	s.HandleFunc("/user/{ID}", auth.JWTMiddleware(api.UsersHandler)).Methods("GET", "POST")
 
+=======
+	s.HandleFunc("/user/{ID}", auth.Middleware(api.UsersHandler)).Methods("GET", "POST")
+	
+>>>>>>> Stashed changes
 	http.Handle("/", r)
 	http.ListenAndServe(config.ServerPort, nil)
 }

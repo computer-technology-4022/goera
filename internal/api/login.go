@@ -8,6 +8,7 @@ import (
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
+	utils "github.com/computer-technology-4022/goera/internal/util"
 )
 
 type loginRequest struct {
@@ -46,7 +47,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auth.SetCookie(w, token, "token", expirationTime)
+	utils.SetCookie(w, token, "token", expirationTime)
 
 	user.Password = ""
 	w.Header().Set("Content-Type", "application/json")

@@ -1,15 +1,11 @@
 package auth
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/computer-technology-4022/goera/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -19,19 +15,6 @@ var jwtSecret = []byte(os.Getenv("JWT_SECRET"))
 type Claims struct {
 	UserID uint `json:"user_id"`
 	jwt.RegisteredClaims
-}
-
-func SetCookie(w http.ResponseWriter, tokenString string,
-	cookieName string, expirationTime time.Time) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     cookieName,
-		Value:    tokenString,
-		Expires:  expirationTime,
-		HttpOnly: true,
-		Secure:   false,
-		Path:     "/",
-		SameSite: http.SameSiteStrictMode,
-	})
 }
 
 func HashPassword(password string) (string, error) {
@@ -77,68 +60,4 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 	}
 
 	return nil, errors.New("invalid token")
-}
-
-func Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var userID uint
-		var hasValidToken bool
-
-		path := r.URL.Path
-		isApiReq := strings.HasPrefix(path, "/api")
-
-		authHeader := r.Header.Get("Authorization")
-		if strings.HasPrefix(authHeader, "Bearer ") {
-			tokenString := authHeader[len("Bearer "):]
-			claims, err := ValidateJWT(tokenString)
-			if err == nil {
-				userID = claims.UserID
-				hasValidToken = true
-			}
-		}
-
-		if !hasValidToken {
-			cookie, err := r.Cookie("token")
-			if err == nil {
-				claims, err := ValidateJWT(cookie.Value)
-				if err == nil {
-					userID = claims.UserID
-					hasValidToken = true
-				}
-			}
-		}
-
-		if isProtected(path, config.ProtectedPrefixes) && !hasValidToken {
-			if isApiReq {
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
-				return
-			}
-			// originalURL := r.URL.String()
-			// http.SetCookie(w, &http.Cookie{
-			// 	Name:     "redirect_url",
-			// 	Value:    originalURL,
-			// 	Path:     "/",
-			// 	HttpOnly: true,
-			// })
-
-			http.Redirect(w, r, "/login?error=unauthorized", http.StatusFound)
-			return
-		}
-
-		if hasValidToken && !isApiReq {
-			ctx := context.WithValue(r.Context(), userIDKey, userID)
-			r = r.WithContext(ctx)
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
-func isProtected(path string, protectedPrefixes []string) bool {
-	for _, prefix := range protectedPrefixes {
-		if strings.HasPrefix(path, prefix) {
-			return true
-		}
-	}
-	return false
 }

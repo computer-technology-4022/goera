@@ -15,18 +15,20 @@
     />
   </head>
   <body class="body">
-    <div class="home_container">
+    <div class="home_container" style="height: fit-content">
       <!-- Original back link removed -->
       <!-- <a href="/questions" class="back_link">← Back to Problems</a> -->
 
       <div class="profile_header">
         <h1 class="home_heading">
-          <span style="color: #ff6308">{{.Username}}</span>'s Profile
-          {{if .IsAdmin}}<span class="admin_badge">ADMIN</span>{{end}}
+          <span style="color: #ff6308">{{.Username}}</span>'s Profile {{if
+          .IsAdmin}}<span class="admin_badge">ADMIN</span>{{end}}
         </h1>
-        <p class="join_date">Member since {{.JoinDate.Format "January 2006"}}</p>
+        <p class="join_date">
+          Member since {{.JoinDate.Format "January 2006"}}
+        </p>
       </div>
-      
+
       <!-- Statistics Section -->
       <div class="stats_container">
         <div class="stat_card">
@@ -50,10 +52,13 @@
         <form action="/admin/toggle-role" method="POST">
           <input type="hidden" name="userID" value="{{.UserID}}" />
           <div class="role_control">
-            <p>Current Role: {{if .IsAdmin}}Administrator{{else}}Regular User{{end}}</p>
+            <p>
+              Current Role: {{if .IsAdmin}}Administrator{{else}}Regular
+              User{{end}}
+            </p>
             <button
               type="submit"
-              class="{{if .IsAdmin}}danger_button primary_button{{else}}primary_button{{end}}"  
+              class="{{if .IsAdmin}}danger_button primary_button{{else}}primary_button{{end}}"
             >
               {{if .IsAdmin}}Revoke Admin Role{{else}}Grant Admin Role{{end}}
             </button>
@@ -63,12 +68,13 @@
       {{end}}
 
       <!-- Back Button (New Style) -->
-      <a href="/questions" style="text-decoration: none; color: inherit;">
-        <div style="width: 100%; margin-top: 30px;"> <!-- Adjust margin-top as needed -->
+      <a href="/questions" style="text-decoration: none; color: inherit">
+        <div style="width: 100%; margin-top: 30px">
+          <!-- Adjust margin-top as needed -->
           <button type="button" class="primary_button">Back to Problems</button>
         </div>
       </a>
-
-    </div> <!-- End of home_container -->
+    </div>
+    <!-- End of home_container -->
   </body>
 </html>

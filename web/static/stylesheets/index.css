@@ -264,7 +264,6 @@
   text-align: center;
 }
 
-
 .submission_info {
   flex-grow: 1;
 }
@@ -282,13 +281,34 @@
 }
 
 /* Status Colors */
-.status.pending { background: #ffd700; color: #000; }
-.status.ok { background: #4CAF50; color: #fff; }
-.status.compile-error { background: #f44336; color: #fff; }
-.status.wrong-answer { background: #ff5722; color: #fff; }
-.status.memory-limit { background: #9C27B0; color: #fff; }
-.status.time-limit { background: #2196F3; color: #fff; }
-.status.runtime-error { background: #607D8B; color: #fff; }
+.status.pending {
+  background: #ffd700;
+  color: #000;
+}
+.status.ok {
+  background: #4caf50;
+  color: #fff;
+}
+.status.compile-error {
+  background: #f44336;
+  color: #fff;
+}
+.status.wrong-answer {
+  background: #ff5722;
+  color: #fff;
+}
+.status.memory-limit {
+  background: #9c27b0;
+  color: #fff;
+}
+.status.time-limit {
+  background: #2196f3;
+  color: #fff;
+}
+.status.runtime-error {
+  background: #607d8b;
+  color: #fff;
+}
 
 /* Create Question Form Styles */
 .question_form {
@@ -296,7 +316,8 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-  background: #ffffff;
+  background-color: #2a2b2e;
+  border-radius: 5px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -309,7 +330,7 @@
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: #333;
+  color: white;
 }
 
 .form_input,
@@ -317,9 +338,11 @@
 .form_select {
   width: 100%;
   padding: 10px;
-  border: 2px solid #ddd;
+  background-color: transparent;
+  border: 1px solid #ddd;
+  color: white;
   border-radius: 8px;
-  font-family: 'Unbounded', sans-serif;
+  font-family: "Unbounded", sans-serif;
   font-size: 14px;
   transition: border-color 0.3s ease;
 }
@@ -354,7 +377,6 @@
   margin-top: 2rem;
   text-align: center;
 }
-
 
 /* Sample Cases Styles */
 .sample_pair {
@@ -421,7 +443,6 @@
   margin: 0;
 }
 
-
 /* Profile Page Styles */
 .profile_header {
   text-align: center;
@@ -441,9 +462,12 @@
 }
 
 .stat_card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 1.5rem;
+  color: white;
+  background-color: #2a2b2e;
+  border-radius: 5px;
+  padding: 20px;
+  border: 1px solid #3d3e42;
+  transition: transform 0.2s ease;
   text-align: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
@@ -512,8 +536,9 @@
 /* Add this to your CSS file */
 
 .submissions_container {
+  background-color: #1d1e20;
   max-height: 65vh; /* ADJUST THIS VALUE! Try 60vh, 70vh, 500px, etc. */
-  overflow-y: auto;  /* Enable vertical scrollbar only when needed */
+  overflow-y: auto; /* Enable vertical scrollbar only when needed */
   padding-right: 8px; /* Optional: Adds space so scrollbar doesn't overlap status */
   margin-bottom: 20px; /* Optional: Adds space between the list and pagination */
 }
@@ -527,9 +552,11 @@
 
 /* Example existing styles (make sure they are present) */
 .submission_card {
-  background-color: #fff; /* Or your card background */
-  border-radius: 8px;
-  padding: 15px 20px;
+  background-color: #2a2b2e;
+  border-radius: 5px;
+  padding: 20px;
+  border: 1px solid #3d3e42;
+  transition: transform 0.2s ease;
   margin-bottom: 15px; /* Spacing between cards */
   display: flex;
   justify-content: space-between;
@@ -537,30 +564,33 @@
   /* ... other card styles ... */
 }
 
+.submission_card:hover {
+  transform: translateX(5px);
+}
 
 .scrollable_content {
   /* Set a maximum height. Adjust the value (e.g., 70vh, 80vh, 500px) 
      as needed based on your header size and desired layout. 
      75vh means 75% of the viewport height. */
-  max-height: 75vh; 
+  max-height: 75vh;
 
   /* Enable vertical scrolling only when content overflows */
-  overflow-y: auto; 
+  overflow-y: auto;
 
   /* Optional: Add some padding at the bottom if the scrollbar 
      gets too close to the pagination */
-  padding-bottom: 20px; 
+  padding-bottom: 20px;
 
   /* Optional: Add some padding on the right to prevent content
      from touching the scrollbar if it appears */
   padding-right: 10px; /* Adjust as needed */
 }
 
-
 /* Optional: Ensure body takes up height if needed for vh units, 
    though often not strictly necessary if the parent isn't constrained */
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
 }
@@ -575,11 +605,9 @@ html, body {
   height: 100vh; /* Make body fill the viewport height */
 }
 
-
 .home_container {
   display: flex;
   flex-direction: column;
   flex-grow: 1; /* Allow container to grow */
   /* overflow: hidden; /* Prevent body scroll */
-} 
-
+}

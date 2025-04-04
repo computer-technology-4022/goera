@@ -13,7 +13,7 @@
     />
   </head>
   <body class="body">
-    <div class="home_container">
+    <div class="home_container" style="height: fit-content;">
       <h1 class="home_heading">
         <span style="color: #ff6308">My</span> Submissions
       </h1>
@@ -23,7 +23,7 @@
         {{range .Submissions}}
         <div class="submission_card">
           <div class="submission_info">
-            <h3 class="question_title"><span style="color: #000000">{{.QuestionName}}</span> /h3>
+            <h3 class="question_title"><span style="">{{.QuestionName}}</span>
             <span class="submission_date">{{.SubmissionDate.Format "2006-01-02 15:04"}}</span>
           </div>
           <span class="status {{.Status | statusToClass}}">

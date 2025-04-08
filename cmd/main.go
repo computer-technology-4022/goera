@@ -21,7 +21,7 @@ func main() {
 	r.PathPrefix(config.StaticRouter).Handler(http.StripPrefix(config.StaticRouter, fs))
 	r.HandleFunc("/", handler.WelcomeHandler)
 	r.HandleFunc("/login", handler.LoginHandler)
-	r.HandleFunc("/signUp", handler.SignUpHandler)
+	r.HandleFunc("/signUp", handler.SignUpHandler)m
 	r.HandleFunc("/questions", handler.QuestionsHandler)
 	r.HandleFunc("/question", handler.QuestionHandler)
 	fmt.Println("Server is running on http://localhost:8080")

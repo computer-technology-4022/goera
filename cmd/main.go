@@ -4,28 +4,36 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/computer-technology-4022/goera/internal/api"
+	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/config"
+	"github.com/computer-technology-4022/goera/internal/database"
 	handler "github.com/computer-technology-4022/goera/internal/handlers"
 	"github.com/gorilla/mux"
 )
 
 func main() {
-	router := mux.NewRouter()
 
-	// Serve static files
-	router.PathPrefix(config.StaticRouter).Handler(
-		http.StripPrefix(config.StaticRouter, http.FileServer(http.Dir(config.StaticRouterDir))))
+	database.InitDB()
+	r := mux.NewRouter()
+	r.Use(auth.Middleware)
+	fs := http.FileServer(http.Dir(config.StaticRouterDir))
+	r.PathPrefix(config.StaticRouter).Handler(http.StripPrefix(config.StaticRouter, fs))
+	r.HandleFunc("/", handler.WelcomeHandler)
+	r.HandleFunc("/login", handler.LoginHandler)
+	r.HandleFunc("/signUp", handler.SignUpHandler)
+	r.HandleFunc("/questions", handler.QuestionsHandler)
+	r.HandleFunc("/question/{id:[0-9]+}", handler.QuestionHandler)
+	r.HandleFunc("/submissions", handler.SubmissionPageHandler)
+	r.HandleFunc("/createQuestion", handler.QuestionCreatorHandler)
+	r.HandleFunc("/profile/{id:[0-9]+}", handler.ProfileHandler)
+	
+	s := r.PathPrefix("/api").Subrouter()
+	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
+	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
+	s.HandleFunc("/user", api.UsersHandler).Methods("GET", "POST")
 
-	// Define routes
-	router.HandleFunc("/", handler.WelcomeHandler)
-	router.HandleFunc("/login", handler.LoginHandler)
-	router.HandleFunc("/signUp", handler.SignUpHandler)
-	router.HandleFunc("/questions", handler.QuestionsHandler)
-	router.HandleFunc("/question/{id:[0-9]+}", handler.QuestionHandler)
-	router.HandleFunc("/submissions", handler.SubmissionPageHandler)
-	router.HandleFunc("/createQuestion", handler.QuestionCreatorHandler)
-	router.HandleFunc("/profile/{id:[0-9]+}", handler.ProfileHandler)
-
-	fmt.Println("Server is running on http://localhost:8080")
-	http.ListenAndServe(config.ServerPort, router)
+	http.Handle("/", r)
+	fmt.Println("Server is running on http://localhost:5000")
+	http.ListenAndServe(config.ServerPort, nil)
 }

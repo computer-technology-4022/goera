@@ -10,7 +10,6 @@ import (
 	"github.com/computer-technology-4022/goera/internal/database"
 	handler "github.com/computer-technology-4022/goera/internal/handlers"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/mux"
 )
 
 func main() {

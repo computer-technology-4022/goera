@@ -15,7 +15,22 @@ func InitDB() error {
 		return err
 	}
 
-	DB.AutoMigrate(&models.User{})
+	err = DB.AutoMigrate(&models.User{})
+	if err != nil {
+		return err
+	}
+
+	DB.Model(&models.User{}).Where("role = ''").Update("role", models.RegularRole)
+
+	err = DB.AutoMigrate(&models.Question{})
+	if err != nil {
+		return err
+	}
+	err = DB.AutoMigrate(&models.Submission{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

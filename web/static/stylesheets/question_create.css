@@ -1,0 +1,35 @@
+.form_scrollable {
+    max-height: 75vh; /* Adjust as needed */
+    overflow-y: auto;
+    padding-right: 15px; /* Prevent scrollbar from overlapping content */
+    margin-top: 20px;
+}
+.sample_pair {
+    position: relative;
+    margin-bottom: 15px;
+    padding-right: 30px; /* Space for remove button */
+}
+.remove_button {
+    position: absolute;
+    top: 5px;
+    right: 0;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+}
+.remove_button:hover {
+    background-color: #cc0000;
+}
+.form_columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}

@@ -10,6 +10,7 @@ import (
 	"github.com/computer-technology-4022/goera/internal/database"
 	handler "github.com/computer-technology-4022/goera/internal/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 )
 
 func main() {
@@ -23,7 +24,10 @@ func main() {
 	r.HandleFunc("/login", handler.LoginHandler)
 	r.HandleFunc("/signUp", handler.SignUpHandler)
 	r.HandleFunc("/questions", handler.QuestionsHandler)
-	r.HandleFunc("/question", handler.QuestionHandler)
+	r.HandleFunc("/question/{id:[0-9]+}", handler.QuestionHandler)
+	r.HandleFunc("/submissions", handler.SubmissionPageHandler)
+	r.HandleFunc("/createQuestion", handler.QuestionCreatorHandler)
+	r.HandleFunc("/profile/{id:[0-9]+}", handler.ProfileHandler)
 	
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")

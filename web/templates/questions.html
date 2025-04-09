@@ -13,50 +13,61 @@
     />
   </head>
   <body class="body">
-    <div class="home_container">
+    <div class="sidebar">
+      <h1 class="sidebar-logo"><span style="color: #ff6308">Go</span>era</h1>
+      <ul class="sidebar-nav">
+        <li><a href="/questions">Problems</a></li>
+        <li><a href="/submissions">Submissions</a></li>
+        <li><a href="/profile/2">Profile</a></li>
+      </ul>
+    </div>
+    <div class="home_container" style="height: fit-content">
       <h1 class="home_heading">
         <span style="color: #ff6308">Go</span>era Problems
       </h1>
-      <a href="/question" style="text-decoration: none; color: inherit">
-        <div class="questions_container">
-          {{with .Questions}} {{range .}}
-          <div class="question_card">
-            <div class="question_header">
-              <h3 class="question_title">{{.Name}}</h3>
-              <span class="difficulty easy">Easy</span>
+
+      <div class="scrollable_content">
+        <a href="/question/4" style="text-decoration: none; color: inherit">
+          <div class="questions_container">
+            {{with .Questions}} {{range .}}
+            <div class="question_card">
+              <div class="question_header">
+                <h3 class="question_title">{{.Name}}</h3>
+                <span class="difficulty easy">Easy</span>
+              </div>
+              <div class="question_tags">
+                <span class="tag">Array</span>
+                <span class="tag">Hash Table</span>
+              </div>
+              <div class="question_stats">
+                <span class="stat">Solved: 45%</span>
+                <span class="stat">Submissions: 1.2M</span>
+              </div>
             </div>
-            <div class="question_tags">
-              <span class="tag">Array</span>
-              <span class="tag">Hash Table</span>
-            </div>
-            <div class="question_stats">
-              <span class="stat">Solved: 45%</span>
-              <span class="stat">Submissions: 1.2M</span>
-            </div>
+            {{end}} {{end}}
           </div>
-          {{end}} {{end}}
+        </a>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          {{if gt .Page 1}}
+          <a href="/questions?page={{sub .Page 1}}">
+            <button class="pagination_button">Previous</button>
+          </a>
+          {{else}}
+          <button class="pagination_button" disabled>Previous</button>
+          {{end}}
+
+          <span class="current_page">Page {{.Page}} of {{.TotalPages}}</span>
+
+          {{if lt .Page .TotalPages}}
+          <a href="/questions?page={{add .Page 1}}">
+            <button class="pagination_button">Next</button>
+          </a>
+          {{else}}
+          <button class="pagination_button" disabled>Next</button>
+          {{end}}
         </div>
-      </a>
-
-      <!-- Pagination -->
-      <div class="pagination">
-        {{if gt .Page 1}}
-        <a href="/questions?page={{sub .Page 1}}">
-          <button class="pagination_button">Previous</button>
-        </a>
-        {{else}}
-        <button class="pagination_button" disabled>Previous</button>
-        {{end}}
-
-        <span class="current_page">Page {{.Page}} of {{.TotalPages}}</span>
-
-        {{if lt .Page .TotalPages}}
-        <a href="/questions?page={{add .Page 1}}">
-          <button class="pagination_button">Next</button>
-        </a>
-        {{else}}
-        <button class="pagination_button" disabled>Next</button>
-        {{end}}
       </div>
     </div>
   </body>

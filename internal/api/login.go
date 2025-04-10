@@ -8,7 +8,7 @@ import (
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
-	utils "github.com/computer-technology-4022/goera/internal/util"
+	utils "github.com/computer-technology-4022/goera/internal/utils"
 )
 
 type loginRequest struct {

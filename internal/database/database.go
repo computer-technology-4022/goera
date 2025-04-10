@@ -21,7 +21,6 @@ func InitDB() error {
 	}
 
 	models.MigrateQuestion(DB)
-
 	return nil
 }
 

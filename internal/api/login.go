@@ -94,7 +94,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	user.Password = ""
 
 	// If it was a form submission, redirect to questions page
-	if contentType != "application/json" {
+	if isFormSubmission {
 		http.Redirect(w, r, "/questions", http.StatusSeeOther)
 		return
 	}

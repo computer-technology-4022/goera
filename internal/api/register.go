@@ -51,7 +51,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Check if form or API request
 	isFormSubmission := contentType != "application/json"
 
 	hasedPassword, err := auth.HashPassword(user.Password)
@@ -89,7 +88,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	user.Password = ""
 
-	if contentType != "application/json" {
+	if isFormSubmission {
 		http.Redirect(w, r, "/questions", http.StatusSeeOther)
 		return
 	}

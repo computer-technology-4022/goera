@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,15 +25,14 @@ type QuestionPublishRequest struct {
 }
 
 type PaginatedResponse struct {
-	Data       any `json:"data"`
-	Page       int         `json:"page"`
-	PageSize   int         `json:"page_size"`
-	TotalItems int64       `json:"total_items"`
-	TotalPages int         `json:"total_pages"`
+	Data       any   `json:"data"`
+	Page       int   `json:"page"`
+	PageSize   int   `json:"page_size"`
+	TotalItems int64 `json:"total_items"`
+	TotalPages int   `json:"total_pages"`
 }
 
 type QuestionsByIdResponse struct {
-	
 }
 
 func QuestionsHandler(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +62,7 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 
 func PublishQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case http.MethodPut:
+	case http.MethodPut, http.MethodPost:
 		publishQuestion(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -381,6 +381,7 @@ func deleteQuestion(w http.ResponseWriter, r *http.Request) {
 }
 
 func publishQuestion(w http.ResponseWriter, r *http.Request) {
+	log.Println("heelo")
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -389,9 +390,23 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var publishReq QuestionPublishRequest
-	if err := json.NewDecoder(r.Body).Decode(&publishReq); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
+
+	contentType := r.Header.Get("Content-Type")
+	isFormSubmission := contentType == "application/x-www-form-urlencoded"
+
+	if isFormSubmission {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		publishedStr := r.FormValue("published")
+		publishReq.Published = publishedStr == "true"
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&publishReq); err != nil {
+			http.Error(w, "Invalid request body", http.StatusBadRequest)
+			return
+		}
 	}
 
 	userID, userExists := auth.UserIDFromContext(r.Context())
@@ -433,6 +448,22 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if question.Published == publishReq.Published {
+		errorMsg := "Question is already in the requested publish state"
+		if isFormSubmission {
+			var state string
+			if publishReq.Published {
+				state = "published"
+			} else {
+				state = "unpublished"
+			}
+			http.Redirect(w, r, fmt.Sprintf("/questions/%d?error=already_%s", id, state), http.StatusSeeOther)
+			return
+		}
+		http.Error(w, errorMsg, http.StatusBadRequest)
+		return
+	}
+
 	question.Published = publishReq.Published
 	if publishReq.Published {
 		publishedByID := userID
@@ -448,6 +479,17 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 	if result.Error != nil {
 		log.Printf("Database error: %v", result.Error)
 		http.Error(w, "Failed to update question", http.StatusInternalServerError)
+		return
+	}
+
+	if isFormSubmission {
+		var successAction string
+		if publishReq.Published {
+			successAction = "published"
+		} else {
+			successAction = "unpublished"
+		}
+		http.Redirect(w, r, fmt.Sprintf("/question/%d?success=%s", id, successAction), http.StatusSeeOther)
 		return
 	}
 

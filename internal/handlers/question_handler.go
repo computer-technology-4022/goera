@@ -14,12 +14,16 @@ import (
 )
 
 type QuestionPageData struct {
-	Title       string
-	TimeLimit   int
-	MemoryLimit int
-	Statement   string
-	IsAdmin     bool
-	IsOwner     bool
+	Title          string
+	TimeLimit      int
+	MemoryLimit    int
+	Statement      string
+	IsAdmin        bool
+	IsPublished    bool
+	IsOwner        bool
+	QuestionID     uint
+	ErrorMessage   string
+	SuccessMessage string
 }
 
 func QuestionHandler(w http.ResponseWriter, r *http.Request) {
@@ -36,13 +40,39 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check for error parameters
+	errorParam := r.URL.Query().Get("error")
+	var errorMessage string = ""
+
+	switch errorParam {
+	case "already_published":
+		errorMessage = "This question is already published."
+	case "already_unpublished":
+		errorMessage = "This question is already unpublished."
+	}
+
+	// Check for success parameters
+	successParam := r.URL.Query().Get("success")
+	var successMessage string = ""
+
+	switch successParam {
+	case "published":
+		successMessage = "The question was successfully published."
+	case "unpublished":
+		successMessage = "The question was successfully unpublished."
+	}
+
 	data := QuestionPageData{
-		Title:       question.Title,
-		TimeLimit:   question.TimeLimit,
-		MemoryLimit: question.MemoryLimit,
-		Statement:   question.Content,
-		IsAdmin:     false,
-		IsOwner:     false,
+		Title:          question.Title,
+		TimeLimit:      question.TimeLimit,
+		MemoryLimit:    question.MemoryLimit,
+		Statement:      question.Content,
+		IsAdmin:        false,
+		IsOwner:        false,
+		IsPublished:    question.Published,
+		QuestionID:     question.ID,
+		ErrorMessage:   errorMessage,
+		SuccessMessage: successMessage,
 	}
 
 	userID, exists := auth.UserIDFromContext(r.Context())

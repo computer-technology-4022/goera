@@ -24,10 +24,21 @@
     </div>
 
     <div class="admin_options">
-      {{if .IsAdmin}}
-      <button class="primary_button">
-        Publish
-      </button>
+      {{if and .IsAdmin .IsPublished}}
+      <form method="POST" action="/api/questions/{{.QuestionID}}/publish">
+        <input type="hidden" name="published" value="false">
+        <button type="submit" class="primary_button">
+          UnPublish
+        </button>
+      </form>
+      {{end}}
+      {{if and .IsAdmin (not .IsPublished)}}
+      <form method="POST" action="/api/questions/{{.QuestionID}}/publish">
+        <input type="hidden" name="published" value="true">
+        <button type="submit" class="primary_button">
+          Publish
+        </button>
+      </form>
       {{end}}
       {{if or .IsAdmin .IsOwner}}
       <button class="primary_button">
@@ -35,6 +46,19 @@
       </button>
       {{end}}
     </div>
+
+    {{if .ErrorMessage}}
+    <div class="error_message" style="color: #ff3333; text-align: center; margin: 10px auto; padding: 10px; max-width: 600px; background-color: #ffeeee; border-radius: 5px;">
+      {{.ErrorMessage}}
+    </div>
+    {{end}}
+    
+    {{if .SuccessMessage}}
+    <div class="success_message" style="color: #006600; text-align: center; margin: 10px auto; padding: 10px; max-width: 600px; background-color: #eeffee; border-radius: 5px;">
+      {{.SuccessMessage}}
+    </div>
+    {{end}}
+    
     <div
       class="home_container_2"
       style="height: fit-content; padding-top: 45px; padding-bottom: 45px"

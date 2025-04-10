@@ -44,6 +44,9 @@ func main() {
 	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE")
 	s.HandleFunc("/questions/{id}/publish", api.PublishQuestionHandler).Methods("PUT")
 
+	s.HandleFunc("/submissions", api.SubmissionsHandler).Methods("GET", "POST")
+	s.HandleFunc("/submissions/{id}", api.SubmissionHandler).Methods("GET")
+
 	http.Handle("/", r)
 	fmt.Println("Server is running on http://localhost:5000")
 	http.ListenAndServe(config.ServerPort, nil)

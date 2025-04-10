@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -12,15 +13,42 @@ import (
 )
 
 func RegisterHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println("asdayhsdbijnfasfasf")
 	if r.Method != http.MethodPost {
 		http.Error(w, "Methode not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	contentType := r.Header.Get("Content-Type")
+
+	// Handle JSON request
+	if contentType == "application/json" {
+		if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		// Handle form data
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		// Get form values
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		if username == "" || password == "" {
+			http.Error(w, "Username and password are required", http.StatusBadRequest)
+			return
+		}
+
+		// Create user with form values
+		user = models.User{
+			Username: username,
+			Password: password,
+		}
 	}
 
 	hasedPassword, err := auth.HashPassword(user.Password)
@@ -48,9 +76,14 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	utils.SetCookie(w, token, "token", expirationTime)
 
 	user.Password = ""
+
+	if contentType != "application/json" {
+		http.Redirect(w, r, "/questions", http.StatusSeeOther)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user": user,
-		// "token": token,
 	})
 }

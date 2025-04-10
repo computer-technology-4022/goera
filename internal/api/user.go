@@ -14,8 +14,6 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		getUserById(w, r)
-	case http.MethodPost:
-		createUser(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -49,23 +47,6 @@ func getAllUsers(w http.ResponseWriter, r *http.Request) {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
-}
-
-func createUser(w http.ResponseWriter, r *http.Request) {
-	db := database.GetDB()
-	log.Print("asdajhsgbdvyfabuthnjimkl")
-	var user models.User
-	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if result := db.Create(&user); result.Error != nil {
-		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(user)
 }
 
 func getUserById(w http.ResponseWriter, r *http.Request) {

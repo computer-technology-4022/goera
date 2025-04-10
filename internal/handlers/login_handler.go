@@ -3,6 +3,8 @@ package handler
 import (
 	"html/template"
 	"net/http"
+
+	"github.com/computer-technology-4022/goera/internal/auth"
 )
 
 type LoginData struct {
@@ -10,6 +12,15 @@ type LoginData struct {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, err := r.Cookie("token")
+	if err == nil && cookie.Value != "" {
+		claims, err := auth.ValidateJWT(cookie.Value)
+		if err == nil && claims.UserID > 0 {
+			http.Redirect(w, r, "/questions", http.StatusSeeOther)
+			return
+		}
+	}
+
 	errorCode := r.URL.Query().Get("error")
 	var errorMessage string
 

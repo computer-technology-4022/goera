@@ -22,20 +22,58 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var loginRequest loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+	var loginData loginRequest
+	contentType := r.Header.Get("Content-Type")
+
+	// Handle JSON request
+	if contentType == "application/json" {
+		if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	} else {
+		// Handle form data
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+			return
+		}
+
+		// Get form values
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		if username == "" || password == "" {
+			http.Error(w, "Username and password are required", http.StatusBadRequest)
+			return
+		}
+
+		// Create login data from form values
+		loginData = loginRequest{
+			Username: username,
+			Password: password,
+		}
 	}
 
 	db := database.GetDB()
 	var user models.User
-	if result := db.Where("username = ?", loginRequest.Username).First(&user); result.Error != nil {
+
+	// Check if form or API request
+	isFormSubmission := contentType != "application/json"
+
+	if result := db.Where("username = ?", loginData.Username).First(&user); result.Error != nil {
+		if isFormSubmission {
+			http.Redirect(w, r, "/login?error=invalid_credentials", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
-	if !auth.CheckPasswordHash(loginRequest.Password, user.Password) {
+	if !auth.CheckPasswordHash(loginData.Password, user.Password) {
+		if isFormSubmission {
+			http.Redirect(w, r, "/login?error=invalid_credentials", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -43,6 +81,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	expirationTime := time.Now().Add(168 * time.Hour)
 	token, err := auth.GenerateJWT(user.ID)
 	if err != nil {
+		if isFormSubmission {
+			http.Redirect(w, r, "/login?error=server_error", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
@@ -50,6 +92,14 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	utils.SetCookie(w, token, "token", expirationTime)
 
 	user.Password = ""
+
+	// If it was a form submission, redirect to questions page
+	if contentType != "application/json" {
+		http.Redirect(w, r, "/questions", http.StatusSeeOther)
+		return
+	}
+
+	// Otherwise return JSON response for API clients
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user": user,

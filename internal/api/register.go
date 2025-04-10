@@ -31,7 +31,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Handle form data
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
+			http.Redirect(w, r, "/signUp?error=invalid_form", http.StatusSeeOther)
 			return
 		}
 
@@ -40,7 +40,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		password := r.FormValue("password")
 
 		if username == "" || password == "" {
-			http.Error(w, "Username and password are required", http.StatusBadRequest)
+			http.Redirect(w, r, "/signUp?error=missing_fields", http.StatusSeeOther)
 			return
 		}
 
@@ -51,8 +51,15 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check if form or API request
+	isFormSubmission := contentType != "application/json"
+
 	hasedPassword, err := auth.HashPassword(user.Password)
 	if err != nil {
+		if isFormSubmission {
+			http.Redirect(w, r, "/signUp?error=server_error", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "failed to hash password", http.StatusInternalServerError)
 		return
 	}
@@ -62,6 +69,11 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
 	db := database.GetDB()
 	if result := db.Create(&user); result.Error != nil {
+		if isFormSubmission {
+			// Most likely username already exists
+			http.Redirect(w, r, "/signUp?error=user_exists", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, result.Error.Error(), http.StatusInternalServerError)
 		return
 	}

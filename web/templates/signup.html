@@ -17,6 +17,11 @@
       <h1 style="text-align: center" class="home_heading">
         <span style="color: #ff6308">Go</span>era
       </h1>
+      {{if .ErrorMessage}}
+      <div style="color: #ff3333; text-align: center; margin-bottom: 15px;">
+        {{.ErrorMessage}}
+      </div>
+      {{end}}
       <form
         class="login_form"
         id="signupForm"

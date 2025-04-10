@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
@@ -288,7 +289,6 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user can edit this question (either owner or admin)
 	var user models.User
 	result = db.First(&user, userID)
 	if result.Error != nil {
@@ -302,7 +302,6 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update question fields
 	question.Title = questionReq.Title
 	question.Content = questionReq.Content
 
@@ -377,7 +376,6 @@ func deleteQuestion(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// publishQuestion handles publishing or unpublishing a question (admin only)
 func publishQuestion(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -406,7 +404,6 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if user is admin
 	var user models.User
 	result := db.First(&user, userID)
 	if result.Error != nil {
@@ -432,13 +429,15 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update publishing status
 	question.Published = publishReq.Published
 	if publishReq.Published {
 		publishedByID := userID
 		question.PublishedBy = &publishedByID
+		now := time.Now()
+		question.PublishedAt = &now
 	} else {
 		question.PublishedBy = nil
+		question.PublishedAt = nil
 	}
 
 	result = db.Save(&question)

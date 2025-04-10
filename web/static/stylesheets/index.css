@@ -74,6 +74,8 @@
   position: fixed;
   padding: 30px 20px;
   border-right: 1px solid #3d3e42;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-logo {
@@ -86,17 +88,21 @@
 
 .sidebar-nav {
   list-style: none;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-nav li {
   margin-bottom: 15px;
+  font-size: 1.5rem !important;
 }
 
 .sidebar-nav a {
   color: azure;
   text-decoration: none;
   font-family: "Roboto", sans-serif;
-  font-size: 1.1rem;
+  font-size: 1.3rem !important;
   display: block;
   padding: 8px 12px;
   border-radius: 4px;

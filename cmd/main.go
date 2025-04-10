@@ -38,6 +38,7 @@ func main() {
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
+	s.HandleFunc("/logout", api.LogoutHandler).Methods("GET", "POST")
 	s.HandleFunc("/user", api.UsersHandler).Methods("GET", "POST")
 	s.HandleFunc("/users/promote", api.PromoteUserHandler).Methods("PUT")
 

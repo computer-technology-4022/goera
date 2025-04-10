@@ -39,6 +39,7 @@ func main() {
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
 	s.HandleFunc("/user", api.UsersHandler).Methods("GET", "POST")
+	s.HandleFunc("/users/promote", api.PromoteUserHandler).Methods("PUT")
 
 	s.HandleFunc("/questions", api.QuestionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE")

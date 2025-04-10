@@ -330,6 +330,7 @@ func deleteQuestion(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// publishQuestion handles publishing or unpublishing a question (admin only)
 func publishQuestion(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
@@ -368,7 +369,7 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if user.Role != models.AdminRole {
-		http.Error(w, "Only administrators can publish questions", http.StatusForbidden)
+		http.Error(w, "Only administrators can publish or unpublish questions", http.StatusForbidden)
 		return
 	}
 

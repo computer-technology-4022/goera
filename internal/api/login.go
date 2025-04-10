@@ -2,13 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
-	utils "github.com/computer-technology-4022/goera/internal/utils"
+	"github.com/computer-technology-4022/goera/internal/utils"
 )
 
 type loginRequest struct {
@@ -18,50 +19,47 @@ type loginRequest struct {
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Methode not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	var loginData loginRequest
-	contentType := r.Header.Get("Content-Type")
 
-	// Handle JSON request
-	if contentType == "application/json" {
-		if err := json.NewDecoder(r.Body).Decode(&loginData); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-	} else {
-		// Handle form data
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
-			return
-		}
-
-		// Get form values
+	// Process form data using our utility function
+	formProcessor := func(r *http.Request) (interface{}, error) {
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
 		if username == "" || password == "" {
-			http.Error(w, "Username and password are required", http.StatusBadRequest)
-			return
+			return nil, fmt.Errorf("username and password are required")
 		}
 
-		// Create login data from form values
-		loginData = loginRequest{
+		return loginRequest{
 			Username: username,
 			Password: password,
+		}, nil
+	}
+
+	result, err := utils.ProcessRequestData(r, &loginData, formProcessor)
+	if err != nil {
+		if utils.IsFormRequest(r) {
+			http.Redirect(w, r, "/login?error=invalid_form", http.StatusSeeOther)
+			return
 		}
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// If the result came from form processing, we need to update loginData
+	if formData, ok := result.(loginRequest); ok {
+		loginData = formData
 	}
 
 	db := database.GetDB()
 	var user models.User
 
-	// Check if form or API request
-	isFormSubmission := contentType != "application/json"
-
 	if result := db.Where("username = ?", loginData.Username).First(&user); result.Error != nil {
-		if isFormSubmission {
+		if utils.IsFormRequest(r) {
 			http.Redirect(w, r, "/login?error=invalid_credentials", http.StatusSeeOther)
 			return
 		}
@@ -70,7 +68,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !auth.CheckPasswordHash(loginData.Password, user.Password) {
-		if isFormSubmission {
+		if utils.IsFormRequest(r) {
 			http.Redirect(w, r, "/login?error=invalid_credentials", http.StatusSeeOther)
 			return
 		}
@@ -81,7 +79,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	expirationTime := time.Now().Add(168 * time.Hour)
 	token, err := auth.GenerateJWT(user.ID)
 	if err != nil {
-		if isFormSubmission {
+		if utils.IsFormRequest(r) {
 			http.Redirect(w, r, "/login?error=server_error", http.StatusSeeOther)
 			return
 		}
@@ -93,17 +91,16 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 	user.Password = ""
 
-	// If it was a form submission, redirect to questions page
-	if isFormSubmission {
+	// Respond based on request type
+	if utils.IsFormRequest(r) {
 		http.Redirect(w, r, "/questions", http.StatusSeeOther)
 		return
 	}
 
-	// Otherwise return JSON response for API clients
+	// Return JSON response for API clients
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user": user,
-		// "token": token,
 	})
 }
 

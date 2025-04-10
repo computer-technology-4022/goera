@@ -31,6 +31,7 @@ func main() {
 	r.HandleFunc("/signUp", handler.SignUpHandler)
 	r.HandleFunc("/questions", handler.QuestionsHandler)
 	r.HandleFunc("/question/{id:[0-9]+}", handler.QuestionHandler)
+	r.HandleFunc("/edit/{id:[0-9]+}", handler.QuestionEditHandler)
 	r.HandleFunc("/submissions", handler.SubmissionPageHandler)
 	r.HandleFunc("/createQuestion", handler.QuestionCreatorHandler)
 	r.HandleFunc("/profile/{id:[0-9]+}", handler.ProfileHandler)
@@ -43,7 +44,7 @@ func main() {
 	s.HandleFunc("/users/promote", api.PromoteUserHandler).Methods("PUT")
 
 	s.HandleFunc("/questions", api.QuestionsHandler).Methods("GET", "POST")
-	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE")
+	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE", "POST")
 	s.HandleFunc("/questions/{id}/publish", api.PublishQuestionHandler).Methods("PUT", "POST")
 
 	s.HandleFunc("/submissions", api.SubmissionsHandler).Methods("GET", "POST")

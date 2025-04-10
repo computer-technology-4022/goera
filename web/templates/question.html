@@ -43,9 +43,11 @@
       </form>
       {{end}}
       {{if or .IsAdmin .IsOwner}}
-      <button class="primary_button">
-        Edit
-      </button>
+      <a href="/edit/{{.QuestionID}}">
+        <button class="primary_button">
+          Edit
+        </button>
+      </a>
       {{end}}
     </div>
 

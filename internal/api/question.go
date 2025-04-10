@@ -6,12 +6,12 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
+	"github.com/computer-technology-4022/goera/internal/utils"
 	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
@@ -60,6 +60,17 @@ func QuestionsHandler(w http.ResponseWriter, r *http.Request) {
 
 // QuestionHandler handles all requests to /api/questions/{id}
 func QuestionHandler(w http.ResponseWriter, r *http.Request) {
+	// Check for method override in form submissions
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err == nil {
+			if method := r.FormValue("_method"); method == "PUT" {
+				r.Method = http.MethodPut
+			} else if method == "DELETE" {
+				r.Method = http.MethodDelete
+			}
+		}
+	}
+
 	switch r.Method {
 	case http.MethodGet:
 		getQuestionByID(w, r)
@@ -122,13 +133,11 @@ func getQuestions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If user is admin, return all questions
 	query := db
 	if user.Role != models.AdminRole {
 		query = query.Where("published = ? OR user_id = ?", true, userID)
 	}
 
-	// Count total items for pagination
 	var totalItems int64
 	if err := query.Model(&models.Question{}).Count(&totalItems).Error; err != nil {
 		log.Printf("Database error counting questions: %v", err)
@@ -136,10 +145,8 @@ func getQuestions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Calculate total pages
 	totalPages := int((totalItems + int64(pageSize) - 1) / int64(pageSize))
 
-	// Apply pagination
 	var questions []models.Question
 	result = query.Limit(pageSize).Offset(offset).Find(&questions)
 	if result.Error != nil {
@@ -148,7 +155,6 @@ func getQuestions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create paginated response
 	response := PaginatedResponse{
 		Data:       questions,
 		Page:       page,
@@ -225,52 +231,59 @@ func getQuestionByID(w http.ResponseWriter, r *http.Request) {
 func createQuestion(w http.ResponseWriter, r *http.Request) {
 	var questionReq QuestionRequest
 
-	contentType := r.Header.Get("Content-Type")
+	// Process form data using our utility function
+	formProcessor := func(r *http.Request) (interface{}, error) {
+		var formReq QuestionRequest
 
-	if contentType == "application/x-www-form-urlencoded" || strings.HasPrefix(contentType, "multipart/form-data") {
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Error parsing form data: "+err.Error(), http.StatusBadRequest)
-			return
-		}
+		formReq.Title = r.FormValue("title")
+		formReq.Content = r.FormValue("content")
 
-		questionReq.Title = r.FormValue("title")
-		questionReq.Content = r.FormValue("content")
-
+		// Parse time limit
 		if timeLimitStr := r.FormValue("time_limit_ms"); timeLimitStr != "" {
 			timeLimit, err := strconv.Atoi(timeLimitStr)
 			if err != nil {
-				http.Error(w, "Invalid time limit: "+err.Error(), http.StatusBadRequest)
-				return
+				return nil, fmt.Errorf("invalid time limit: %v", err)
 			}
-			questionReq.TimeLimit = timeLimit
+			formReq.TimeLimit = timeLimit
 		}
 
+		// Parse memory limit
 		if memoryLimitStr := r.FormValue("memory_limit_mb"); memoryLimitStr != "" {
 			memoryLimit, err := strconv.Atoi(memoryLimitStr)
 			if err != nil {
-				http.Error(w, "Invalid memory limit: "+err.Error(), http.StatusBadRequest)
-				return
+				return nil, fmt.Errorf("invalid memory limit: %v", err)
 			}
-			questionReq.MemoryLimit = memoryLimit
+			formReq.MemoryLimit = memoryLimit
 		}
 
-		questionReq.SampleInputs = r.Form["sample_inputs[]"]
-		questionReq.SampleOutputs = r.Form["sample_outputs[]"]
+		// Get sample inputs and outputs
+		formReq.SampleInputs = r.Form["sample_inputs[]"]
+		formReq.SampleOutputs = r.Form["sample_outputs[]"]
 
-		questionReq.Tags = r.FormValue("tags")
+		// Get tags
+		formReq.Tags = r.FormValue("tags")
 
-		if questionReq.Title == "" || questionReq.Content == "" {
-			http.Error(w, "Title and content are required", http.StatusBadRequest)
-			return
+		// Validate required fields
+		if formReq.Title == "" || formReq.Content == "" {
+			return nil, fmt.Errorf("title and content are required")
 		}
-		log.Println("Form data processed successfully:", questionReq.Title)
-		log.Println("Sample inputs:", questionReq.SampleInputs)
-		log.Println("Sample outputs:", questionReq.SampleOutputs)
-	} else {
-		if err := json.NewDecoder(r.Body).Decode(&questionReq); err != nil {
-			http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
-			return
-		}
+
+		log.Println("Form data processed successfully:", formReq.Title)
+		log.Println("Sample inputs:", formReq.SampleInputs)
+		log.Println("Sample outputs:", formReq.SampleOutputs)
+
+		return formReq, nil
+	}
+
+	result, err := utils.ProcessRequestData(r, &questionReq, formProcessor)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// If the result came from form processing, we need to update our questionReq
+	if formData, ok := result.(QuestionRequest); ok {
+		questionReq = formData
 	}
 
 	userID, userExists := auth.UserIDFromContext(r.Context())
@@ -281,14 +294,14 @@ func createQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	question := models.Question{
-		Title:       questionReq.Title,
-		Content:     questionReq.Content,
-		UserID:      userID,
-		Published:   false,
-		TimeLimit:   questionReq.TimeLimit,
-		MemoryLimit: questionReq.MemoryLimit,
-		Tags:        questionReq.Tags,
-		ExampleInput: questionReq.SampleInputs[0],
+		Title:         questionReq.Title,
+		Content:       questionReq.Content,
+		UserID:        userID,
+		Published:     false,
+		TimeLimit:     questionReq.TimeLimit,
+		MemoryLimit:   questionReq.MemoryLimit,
+		Tags:          questionReq.Tags,
+		ExampleInput:  questionReq.SampleInputs[0],
 		ExampleOutput: questionReq.SampleOutputs[0],
 	}
 
@@ -299,9 +312,9 @@ func createQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := db.Create(&question)
-	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
+	dbResult := db.Create(&question)
+	if dbResult.Error != nil {
+		log.Printf("Database error: %v", dbResult.Error)
 		http.Error(w, "Failed to create question", http.StatusInternalServerError)
 		return
 	}
@@ -309,7 +322,7 @@ func createQuestion(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Question created successfully with ID: %d", question.ID)
 
 	// Based on content type, return appropriate response
-	if strings.HasPrefix(contentType, "application/json") {
+	if utils.IsJSONRequest(r) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		if err := json.NewEncoder(w).Encode(question); err != nil {
@@ -330,9 +343,49 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var questionReq QuestionRequest
-	if err := json.NewDecoder(r.Body).Decode(&questionReq); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+
+	formProcessor := func(r *http.Request) (any, error) {
+		var formReq QuestionRequest
+
+		formReq.Title = r.FormValue("title")
+		formReq.Content = r.FormValue("content")
+
+		if timeLimitStr := r.FormValue("time_limit_ms"); timeLimitStr != "" {
+			timeLimit, err := strconv.Atoi(timeLimitStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid time limit: %v", err)
+			}
+			formReq.TimeLimit = timeLimit
+		}
+
+		if memoryLimitStr := r.FormValue("memory_limit_mb"); memoryLimitStr != "" {
+			memoryLimit, err := strconv.Atoi(memoryLimitStr)
+			if err != nil {
+				return nil, fmt.Errorf("invalid memory limit: %v", err)
+			}
+			formReq.MemoryLimit = memoryLimit
+		}
+
+		formReq.SampleInputs = r.Form["sample_inputs[]"]
+		formReq.SampleOutputs = r.Form["sample_outputs[]"]
+
+		formReq.Tags = r.FormValue("tags")
+
+		if formReq.Title == "" || formReq.Content == "" {
+			return nil, fmt.Errorf("title and content are required")
+		}
+
+		return formReq, nil
+	}
+
+	result, err := utils.ProcessRequestData(r, &questionReq, formProcessor)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	if formData, ok := result.(QuestionRequest); ok {
+		questionReq = formData
 	}
 
 	userID, userExists := auth.UserIDFromContext(r.Context())
@@ -350,37 +403,55 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var question models.Question
-	result := db.First(&question, id)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
+	dbResult := db.First(&question, id)
+	if dbResult.Error != nil {
+		if dbResult.Error == gorm.ErrRecordNotFound {
 			http.Error(w, "Question not found", http.StatusNotFound)
 		} else {
-			log.Printf("Database error: %v", result.Error)
+			log.Printf("Database error: %v", dbResult.Error)
 			http.Error(w, "Failed to retrieve question", http.StatusInternalServerError)
 		}
 		return
 	}
 
 	var user models.User
-	result = db.First(&user, userID)
-	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
+	dbResult = db.First(&user, userID)
+	if dbResult.Error != nil {
+		log.Printf("Database error: %v", dbResult.Error)
 		http.Error(w, "Failed to retrieve user", http.StatusInternalServerError)
 		return
 	}
 
 	if question.UserID != userID && user.Role != models.AdminRole {
+		if utils.IsFormRequest(r) {
+			http.Redirect(w, r, fmt.Sprintf("/question/%d", question.ID), http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Unauthorized to edit this question", http.StatusForbidden)
 		return
 	}
 
 	question.Title = questionReq.Title
 	question.Content = questionReq.Content
+	question.TimeLimit = questionReq.TimeLimit
+	question.MemoryLimit = questionReq.MemoryLimit
+	question.Tags = questionReq.Tags
 
-	result = db.Save(&question)
-	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
+	// Update example fields if provided
+	if len(questionReq.SampleInputs) > 0 && len(questionReq.SampleOutputs) > 0 {
+		question.ExampleInput = questionReq.SampleInputs[0]
+		question.ExampleOutput = questionReq.SampleOutputs[0]
+	}
+
+	dbResult = db.Save(&question)
+	if dbResult.Error != nil {
+		log.Printf("Database error: %v", dbResult.Error)
 		http.Error(w, "Failed to update question", http.StatusInternalServerError)
+		return
+	}
+
+	if utils.IsFormRequest(r) {
+		http.Redirect(w, r, fmt.Sprintf("/question/%d", question.ID), http.StatusSeeOther)
 		return
 	}
 
@@ -449,7 +520,7 @@ func deleteQuestion(w http.ResponseWriter, r *http.Request) {
 }
 
 func publishQuestion(w http.ResponseWriter, r *http.Request) {
-	log.Println("heelo")
+	log.Println("Publishing question...")
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -459,22 +530,25 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 
 	var publishReq QuestionPublishRequest
 
-	contentType := r.Header.Get("Content-Type")
-	isFormSubmission := contentType == "application/x-www-form-urlencoded"
-
-	if isFormSubmission {
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Failed to parse form data", http.StatusBadRequest)
-			return
-		}
+	// Process form data using our utility function
+	formProcessor := func(r *http.Request) (interface{}, error) {
+		var formReq QuestionPublishRequest
 
 		publishedStr := r.FormValue("published")
-		publishReq.Published = publishedStr == "true"
-	} else {
-		if err := json.NewDecoder(r.Body).Decode(&publishReq); err != nil {
-			http.Error(w, "Invalid request body", http.StatusBadRequest)
-			return
-		}
+		formReq.Published = publishedStr == "true"
+
+		return formReq, nil
+	}
+
+	result, err := utils.ProcessRequestData(r, &publishReq, formProcessor)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// If the result came from form processing, we need to update our publishReq
+	if formData, ok := result.(QuestionPublishRequest); ok {
+		publishReq = formData
 	}
 
 	userID, userExists := auth.UserIDFromContext(r.Context())
@@ -492,9 +566,9 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user models.User
-	result := db.First(&user, userID)
-	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
+	dbResult := db.First(&user, userID)
+	if dbResult.Error != nil {
+		log.Printf("Database error: %v", dbResult.Error)
 		http.Error(w, "Failed to retrieve user", http.StatusInternalServerError)
 		return
 	}
@@ -505,12 +579,12 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var question models.Question
-	result = db.First(&question, id)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
+	dbResult = db.First(&question, id)
+	if dbResult.Error != nil {
+		if dbResult.Error == gorm.ErrRecordNotFound {
 			http.Error(w, "Question not found", http.StatusNotFound)
 		} else {
-			log.Printf("Database error: %v", result.Error)
+			log.Printf("Database error: %v", dbResult.Error)
 			http.Error(w, "Failed to retrieve question", http.StatusInternalServerError)
 		}
 		return
@@ -518,7 +592,7 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 
 	if question.Published == publishReq.Published {
 		errorMsg := "Question is already in the requested publish state"
-		if isFormSubmission {
+		if utils.IsFormRequest(r) {
 			var state string
 			if publishReq.Published {
 				state = "published"
@@ -543,14 +617,14 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 		question.PublishedAt = nil
 	}
 
-	result = db.Save(&question)
-	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
+	dbResult = db.Save(&question)
+	if dbResult.Error != nil {
+		log.Printf("Database error: %v", dbResult.Error)
 		http.Error(w, "Failed to update question", http.StatusInternalServerError)
 		return
 	}
 
-	if isFormSubmission {
+	if utils.IsFormRequest(r) {
 		var successAction string
 		if publishReq.Published {
 			successAction = "published"

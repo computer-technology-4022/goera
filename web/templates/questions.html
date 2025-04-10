@@ -33,15 +33,22 @@
             <div class="question_card">
               <div class="question_header">
                 <h3 class="question_title">{{.Title}}</h3>
-                <span class="difficulty easy">Easy</span>
+                {{if .Published}}
+                <span class="difficulty easy">Published</span>
+                {{else}}
+                <span class="difficulty medium">Draft</span>
+                {{end}}
               </div>
               <div class="question_tags">
                 <span class="tag">Array</span>
                 <span class="tag">Hash Table</span>
               </div>
               <div class="question_stats">
-                <span class="stat">Solved: 45%</span>
-                <span class="stat">Submissions: 1.2M</span>
+                {{if .PublishedAt}}
+                <span class="stat">Published: {{.PublishedAt.Format "Jan 2, 2006 3:04 PM"}}</span>
+                {{else}}
+                <span class="stat">Draft: {{.CreatedAt.Format "Jan 2, 2006 3:04 PM"}}</span>
+                {{end}}
               </div>
             </div>
             {{end}} {{end}}

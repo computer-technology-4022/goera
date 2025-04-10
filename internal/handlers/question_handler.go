@@ -5,12 +5,13 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/computer-technology-4022/goera/internal/models"
 	"github.com/gorilla/mux"
 	// "strconv"
 )
 
-type QuestionData struct {
-	Question Question
+type QuestionPageData struct {
+	Question models.Question
 }
 
 func QuestionHandler(w http.ResponseWriter, r *http.Request) {
@@ -18,9 +19,9 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 	id := vars["id"]
 	fmt.Println("Question ID:", id)
 	// pageStr := r.URL.Query().Get("questionID")
-	question := Question{Name: "asd"}
+	question := models.Question{Title: "kis"}
 
-	data := QuestionData{
+	data := QuestionPageData{
 		Question: question,
 	}
 

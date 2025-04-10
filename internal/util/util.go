@@ -16,3 +16,7 @@ func SetCookie(w http.ResponseWriter, tokenString string, cookieName string, exp
 		SameSite: http.SameSiteStrictMode,
 	})
 }
+
+func SendRequest()  {
+	
+}

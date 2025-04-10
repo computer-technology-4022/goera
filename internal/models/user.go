@@ -17,3 +17,12 @@ type User struct {
 	Password string   `json:"password"` // User's password (hashed)
 	Role     UserRole `json:"role"`     // User's role (ADMIN or USER)
 }
+
+func MigrateUser(db *gorm.DB) error {
+	err := db.AutoMigrate(&User{})
+	if err != nil {
+		return err
+	}
+	db.Model(&User{}).Where("role = ''").Update("role", RegularRole)
+	return nil
+}

@@ -36,3 +36,12 @@ type Submission struct {
 	UserID         uint        `json:"userId"` // Reference to the user
 	User           User        `json:"-" gorm:"foreignKey:UserID"`
 }
+
+
+func MigrateSubmission(db *gorm.DB) error {
+	err := db.AutoMigrate(&Submission{})
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -23,3 +23,11 @@ type Question struct {
 	TimeLimit   int    `json:"timeLimit"`   // Time limit (in milliseconds)
 	MemoryLimit int    `json:"memoryLimit"` // Memory limit (in megabytes)
 }
+
+func MigrateQuestion(db *gorm.DB) error {
+	err := db.AutoMigrate(&Question{})
+	if err != nil {
+		return err
+	}
+	return nil
+}

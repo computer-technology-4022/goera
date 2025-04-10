@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/computer-technology-4022/goera/internal/api"
@@ -13,8 +14,14 @@ import (
 )
 
 func main() {
+	config.Init()
+	err := database.InitDB()
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer database.CloseDB()
 
-	database.InitDB()
 	r := mux.NewRouter()
 	r.Use(auth.Middleware)
 	fs := http.FileServer(http.Dir(config.StaticRouterDir))
@@ -27,7 +34,7 @@ func main() {
 	r.HandleFunc("/submissions", handler.SubmissionPageHandler)
 	r.HandleFunc("/createQuestion", handler.QuestionCreatorHandler)
 	r.HandleFunc("/profile/{id:[0-9]+}", handler.ProfileHandler)
-	
+
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")

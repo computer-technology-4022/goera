@@ -29,3 +29,4 @@ go.work.sum
 
 # Sh files
 *.sh
+README_POSTGRES.md

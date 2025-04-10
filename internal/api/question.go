@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/computer-technology-4022/goera/internal/auth"
@@ -15,9 +16,20 @@ import (
 	"gorm.io/gorm"
 )
 
+// SampleIO represents a single pair of input and output examples
+type SampleIO struct {
+	Input  string `json:"input"`
+	Output string `json:"output"`
+}
+
 type QuestionRequest struct {
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Title         string   `json:"title"`
+	Content       string   `json:"content"`
+	TimeLimit     int      `json:"time_limit_ms"`
+	MemoryLimit   int      `json:"memory_limit_mb"`
+	SampleInputs  []string `json:"sample_inputs"`
+	SampleOutputs []string `json:"sample_outputs"`
+	Tags          string   `json:"tags"`
 }
 
 type QuestionPublishRequest struct {
@@ -212,9 +224,53 @@ func getQuestionByID(w http.ResponseWriter, r *http.Request) {
 
 func createQuestion(w http.ResponseWriter, r *http.Request) {
 	var questionReq QuestionRequest
-	if err := json.NewDecoder(r.Body).Decode(&questionReq); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
-		return
+
+	contentType := r.Header.Get("Content-Type")
+
+	if contentType == "application/x-www-form-urlencoded" || strings.HasPrefix(contentType, "multipart/form-data") {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Error parsing form data: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		questionReq.Title = r.FormValue("title")
+		questionReq.Content = r.FormValue("content")
+
+		if timeLimitStr := r.FormValue("time_limit_ms"); timeLimitStr != "" {
+			timeLimit, err := strconv.Atoi(timeLimitStr)
+			if err != nil {
+				http.Error(w, "Invalid time limit: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			questionReq.TimeLimit = timeLimit
+		}
+
+		if memoryLimitStr := r.FormValue("memory_limit_mb"); memoryLimitStr != "" {
+			memoryLimit, err := strconv.Atoi(memoryLimitStr)
+			if err != nil {
+				http.Error(w, "Invalid memory limit: "+err.Error(), http.StatusBadRequest)
+				return
+			}
+			questionReq.MemoryLimit = memoryLimit
+		}
+
+		questionReq.SampleInputs = r.Form["sample_inputs[]"]
+		questionReq.SampleOutputs = r.Form["sample_outputs[]"]
+
+		questionReq.Tags = r.FormValue("tags")
+
+		if questionReq.Title == "" || questionReq.Content == "" {
+			http.Error(w, "Title and content are required", http.StatusBadRequest)
+			return
+		}
+		log.Println("Form data processed successfully:", questionReq.Title)
+		log.Println("Sample inputs:", questionReq.SampleInputs)
+		log.Println("Sample outputs:", questionReq.SampleOutputs)
+	} else {
+		if err := json.NewDecoder(r.Body).Decode(&questionReq); err != nil {
+			http.Error(w, "Invalid request body: "+err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	userID, userExists := auth.UserIDFromContext(r.Context())
@@ -225,10 +281,15 @@ func createQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	question := models.Question{
-		Title:     questionReq.Title,
-		Content:   questionReq.Content,
-		UserID:    userID,
-		Published: false,
+		Title:       questionReq.Title,
+		Content:     questionReq.Content,
+		UserID:      userID,
+		Published:   false,
+		TimeLimit:   questionReq.TimeLimit,
+		MemoryLimit: questionReq.MemoryLimit,
+		Tags:        questionReq.Tags,
+		ExampleInput: questionReq.SampleInputs[0],
+		ExampleOutput: questionReq.SampleOutputs[0],
 	}
 
 	db := database.GetDB()
@@ -245,11 +306,18 @@ func createQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	if err := json.NewEncoder(w).Encode(question); err != nil {
-		log.Printf("JSON encoding error: %v", err)
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	log.Printf("Question created successfully with ID: %d", question.ID)
+
+	// Based on content type, return appropriate response
+	if strings.HasPrefix(contentType, "application/json") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(question); err != nil {
+			log.Printf("JSON encoding error: %v", err)
+			http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		}
+	} else {
+		http.Redirect(w, r, fmt.Sprintf("/question/%d", question.ID), http.StatusSeeOther)
 	}
 }
 

@@ -400,6 +400,7 @@
 .form_input,
 .form_textarea,
 .form_select {
+  background-color: #3d3e42;
   width: 100%;
   padding: 10px;
   background-color: transparent;
@@ -448,7 +449,7 @@
   margin-bottom: 1rem;
   padding: 10px;
   border-radius: 8px;
-  background: #f8f8f8;
+  background: #3d3e42;
 }
 
 .remove_button {

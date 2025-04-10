@@ -24,6 +24,8 @@ type QuestionPageData struct {
 	QuestionID     uint
 	ErrorMessage   string
 	SuccessMessage string
+	ExampleInput   string
+	ExampleOutput  string
 }
 
 func QuestionHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,8 +75,9 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 		QuestionID:     question.ID,
 		ErrorMessage:   errorMessage,
 		SuccessMessage: successMessage,
+		ExampleInput:   question.ExampleInput,
+		ExampleOutput:  question.ExampleOutput,
 	}
-
 	userID, exists := auth.UserIDFromContext(r.Context())
 	if exists {
 		user, err := auth.GetUserFromContext(r.Context())

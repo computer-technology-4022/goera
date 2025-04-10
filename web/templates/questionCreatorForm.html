@@ -30,7 +30,7 @@
       </h1>
 
       <div class="form_scrollable">
-        <form class="question_form" action="/questions/create" method="POST">
+        <form class="question_form" action="/api/questions" method="POST">
           <!-- Question Title -->
           <div class="form_group">
             <label for="title" class="form_label">Question Title</label>
@@ -49,7 +49,7 @@
             <label for="statement" class="form_label">Statement</label>
             <textarea
               id="statement"
-              name="statement"
+              name="content"
               class="form_textarea"
               rows="8"
               placeholder="Describe the problem. You can use markdown or specify if HTML is allowed (e.g., for <code> tags)."
@@ -88,23 +88,6 @@
               required
             />
           </div>
-
-          <!-- Constraints -->
-          <div class="form_group">
-            <label for="constraints" class="form_label"
-              >Constraints (Optional)</label
-            >
-            <textarea
-              id="constraints"
-              name="constraints"
-              class="form_textarea"
-              rows="4"
-              placeholder="List any constraints, e.g.,
-1 <= nums.length <= 1000
--10^9 <= nums[i] <= 10^9"
-            ></textarea>
-          </div>
-
           <!-- Example Input/Output Container -->
           <div class="form_group">
             <label class="form_label">Example Input/Output</label>
@@ -189,15 +172,6 @@
             <!-- Or keep "Save as Draft" if that's the workflow -->
           </div>
 
-          <!-- Back Button -->
-          <!-- Assumes /questions is the correct URL for the problems list -->
-          <a href="/questions" style="text-decoration: none; color: inherit">
-            <div style="width: 100%; margin-top: 30px">
-              <button type="button" class="primary_button">
-                Back to Problems
-              </button>
-            </div>
-          </a>
         </form>
       </div>
     </div>

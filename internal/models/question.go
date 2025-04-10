@@ -20,6 +20,8 @@ type Question struct {
 	Tags        string       `json:"tags"`        // Question tags
 	TimeLimit   int          `json:"timeLimit"`   // Time limit (in milliseconds)
 	MemoryLimit int          `json:"memoryLimit"` // Memory limit (in megabytes)
+	ExampleInput string `json:"exampleInput"`
+	ExampleOutput string `json:"exmapleOutput"`
 }
 
 func MigrateQuestion(db *gorm.DB) error {

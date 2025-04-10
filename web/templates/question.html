@@ -22,35 +22,44 @@
         <li><a href="/profile/2">Profile</a></li>
       </ul>
     </div>
+
+    <div class="admin_options">
+      {{if .IsAdmin}}
+      <button class="primary_button">
+        Publish
+      </button>
+      {{end}}
+      {{if or .IsAdmin .IsOwner}}
+      <button class="primary_button">
+        Edit
+      </button>
+      {{end}}
+    </div>
     <div
       class="home_container_2"
       style="height: fit-content; padding-top: 45px; padding-bottom: 45px"
     >
       <!-- Question Title -->
-      <h2 class="question_detail_title">Two Sum</h2>
+      <h2 class="question_detail_title">{{.Title}}</h2>
 
       <!-- Question Statement -->
       <div class="question_section">
         <h3 class="section_title">Statement</h3>
         <p class="section_content">
-          Given an array of integers <code>nums</code> and an integer
-          <code>target</code>, return indices of the two numbers such that they
-          add up to <code>target</code>. You may assume that each input would
-          have exactly one solution, and you may not use the same element twice.
-          You can return the answer in any order.
+          {{.Statement}}
         </p>
       </div>
 
       <!-- Time Limit -->
       <div class="question_section">
         <h3 class="section_title">Time Limit</h3>
-        <p class="section_content">1000 milliseconds</p>
+        <p class="section_content">{{.TimeLimit}} milliseconds</p>
       </div>
 
       <!-- Memory Limit -->
       <div class="question_section">
         <h3 class="section_title">Memory Limit</h3>
-        <p class="section_content">256 MB</p>
+        <p class="section_content">{{.MemoryLimit}} MB</p>
       </div>
 
       <!-- Input -->
@@ -80,18 +89,12 @@ target = 9</pre
             accept=".cpp,.java,.py,.js,.psd"
             required
           />
-          <button onsubmit="" type="submit" class="primary_button">
+          <button class="primary_button">
             Submit
           </button>
         </form>
       </div>
 
-      <!-- Back Button -->
-      <a href="/questions" style="text-decoration: none; color: inherit">
-        <div style="width: 100%; margin-top: 30px">
-          <button class="primary_button">Back to Problems</button>
-        </div>
-      </a>
     </div>
   </body>
 </html>

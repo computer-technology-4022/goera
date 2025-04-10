@@ -31,3 +31,12 @@
   font-family: "Courier New", Courier, monospace;
   overflow-x: auto;
 }
+
+.admin_options {
+  position: absolute;
+  width: fit-content;
+  top: 50px;
+  right: 100px;
+  display: flex;
+  gap: 20px;
+}

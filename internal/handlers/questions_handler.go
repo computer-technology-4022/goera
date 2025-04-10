@@ -52,6 +52,7 @@ func QuestionsHandler(w http.ResponseWriter, r *http.Request) {
 		TotalPages: apiResponse.TotalPages,
 	}
 
+
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
 		"add": func(a, b int) int { return a + b },

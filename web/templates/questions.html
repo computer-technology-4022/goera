@@ -27,9 +27,9 @@
       </h1>
 
       <div class="scrollable_content">
-        <a href="/question/4" style="text-decoration: none; color: inherit">
           <div class="questions_container">
             {{with .Questions}} {{range .}}
+            <a href="/question/{{.ID}}" style="text-decoration: none; color: inherit; cursor: pointer;">
             <div class="question_card">
               <div class="question_header">
                 <h3 class="question_title">{{.Title}}</h3>
@@ -51,9 +51,9 @@
                 {{end}}
               </div>
             </div>
+        </a>
             {{end}} {{end}}
           </div>
-        </a>
 
         <!-- Pagination -->
         <div class="pagination">

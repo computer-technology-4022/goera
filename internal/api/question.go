@@ -24,11 +24,15 @@ type QuestionPublishRequest struct {
 }
 
 type PaginatedResponse struct {
-	Data       interface{} `json:"data"`
+	Data       any `json:"data"`
 	Page       int         `json:"page"`
 	PageSize   int         `json:"page_size"`
 	TotalItems int64       `json:"total_items"`
 	TotalPages int         `json:"total_pages"`
+}
+
+type QuestionsByIdResponse struct {
+	
 }
 
 func QuestionsHandler(w http.ResponseWriter, r *http.Request) {

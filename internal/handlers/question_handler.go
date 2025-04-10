@@ -3,26 +3,55 @@ package handler
 import (
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 
+	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/models"
+	"github.com/computer-technology-4022/goera/internal/utils"
 	"github.com/gorilla/mux"
 	// "strconv"
 )
 
 type QuestionPageData struct {
-	Question models.Question
+	Title       string
+	TimeLimit   int
+	MemoryLimit int
+	Statement   string
+	IsAdmin     bool
+	IsOwner     bool
 }
 
 func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id := vars["id"]
-	fmt.Println("Question ID:", id)
-	// pageStr := r.URL.Query().Get("questionID")
-	question := models.Question{Title: "kis"}
+
+	apiPath := fmt.Sprintf("/api/questions/%s", id)
+	apiClient := utils.GetAPIClient()
+	var question models.Question
+	err := apiClient.Get(r, apiPath, &question)
+	if err != nil {
+		log.Printf("Error fetching questions: %v", err)
+		http.Error(w, "Failed to fetch questions", http.StatusInternalServerError)
+		return
+	}
 
 	data := QuestionPageData{
-		Question: question,
+		Title:       question.Title,
+		TimeLimit:   question.TimeLimit,
+		MemoryLimit: question.MemoryLimit,
+		Statement:   question.Content,
+		IsAdmin:     false,
+		IsOwner:     false,
+	}
+
+	userID, exists := auth.UserIDFromContext(r.Context())
+	if exists {
+		user, err := auth.GetUserFromContext(r.Context())
+		if err == nil {
+			data.IsAdmin = user.Role == models.AdminRole
+		}
+		data.IsOwner = question.UserID == userID
 	}
 
 	funcMap := template.FuncMap{}
@@ -30,7 +59,7 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.New("question.html").
 		Funcs(funcMap).ParseFiles("web/templates/question.html", "web/templates/base.html"))
 
-	err := tmpl.Execute(w, data)
+	err = tmpl.Execute(w, data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

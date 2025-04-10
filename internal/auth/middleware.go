@@ -54,7 +54,7 @@ func Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		if hasValidToken && !isApiReq {
+		if hasValidToken {
 			ctx := context.WithValue(r.Context(), userIDKey, userID)
 			r = r.WithContext(ctx)
 		}

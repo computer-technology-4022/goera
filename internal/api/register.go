@@ -30,6 +30,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.Password = hasedPassword
+	user.Role = models.RegularRole
 
 	db := database.GetDB()
 	if result := db.Create(&user); result.Error != nil {

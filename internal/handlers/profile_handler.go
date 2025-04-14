@@ -7,10 +7,9 @@ import (
 	"strconv"
 
 	"github.com/computer-technology-4022/goera/internal/auth"
-	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
+	"github.com/computer-technology-4022/goera/internal/utils"
 	"github.com/gorilla/mux"
-	"gorm.io/gorm"
 )
 
 // ProfileData holds the information needed for the profile template
@@ -30,43 +29,44 @@ type ProfileData struct {
 func ProfileHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	idStr := vars["id"]
-	profileUserID, err := strconv.ParseUint(idStr, 10, 32)
+	// Validate idStr is a number before using it? (Optional, depends on desired robustness)
+	_, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
 		log.Printf("Invalid profile user ID format: %v", err)
 		http.Error(w, "Invalid User ID", http.StatusBadRequest)
 		return
 	}
 
-	db := database.GetDB()
-	if db == nil {
-		log.Println("Database connection is nil in ProfileHandler")
-		http.Error(w, "Database connection error", http.StatusInternalServerError)
-		return
-	}
+	apiClient := utils.GetAPIClient()
 
-	// 1. Fetch the user whose profile is being viewed
+	// 1. Fetch the user whose profile is being viewed via API
 	var profileUser models.User
-	result := db.First(&profileUser, uint(profileUserID))
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
+
+	err = apiClient.Get(r, "/api/user/"+idStr, &profileUser)
+	if err != nil {
+		if err.Error() == "API returned status 404" {
 			http.NotFound(w, r)
 		} else {
-			log.Printf("Database error fetching profile user: %v", result.Error)
+			log.Printf("Error fetching profile user via API: %v", err)
 			http.Error(w, "Failed to retrieve user profile", http.StatusInternalServerError)
 		}
 		return
 	}
 
-	// 2. Fetch the currently logged-in user (viewer)
+	// 2. Fetch the currently logged-in user (viewer) via API
 	viewerUserID, viewerExists := auth.UserIDFromContext(r.Context())
 	var isViewerAdmin bool
+	var viewerUser models.User
 	if viewerExists {
-		var viewerUser models.User
-		result := db.First(&viewerUser, viewerUserID)
-		if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-			// Log error but don't necessarily block the profile view
-			log.Printf("Database error fetching viewing user: %v", result.Error)
-		} else if result.Error == nil {
+		// Clone the request to avoid modifying the original
+		viewerReq := r.Clone(r.Context())
+		viewerReq.Header.Set("userID", strconv.FormatUint(uint64(viewerUserID), 10))
+		err = apiClient.Get(viewerReq, "/api/users", &viewerUser)
+		if err != nil {
+			if err.Error() != "API returned status 404" {
+				log.Printf("Error fetching viewing user via API: %v", err)
+			}
+		} else {
 			isViewerAdmin = (viewerUser.Role == models.AdminRole)
 		}
 	}

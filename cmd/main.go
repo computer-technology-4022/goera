@@ -41,6 +41,7 @@ func main() {
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
 	s.HandleFunc("/logout", api.LogoutHandler).Methods("GET", "POST")
 	s.HandleFunc("/user/{id:[0-9]+}/promote", api.PromoteUserHandler).Methods("PUT", "POST")
+	s.HandleFunc("/user/{id:[0-9]+}", api.UsersHandler).Methods("GET")
 
 	s.HandleFunc("/questions", api.QuestionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE", "POST")

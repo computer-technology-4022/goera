@@ -36,7 +36,7 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 	apiPath := fmt.Sprintf("/api/questions/%s", id)
 	apiClient := utils.GetAPIClient()
 	var question models.Question
-	err := apiClient.Get(r, apiPath, &question)
+	err := apiClient.Get(r, apiPath,&question)
 	if err != nil {
 		log.Printf("Error fetching questions: %v", err)
 		http.Error(w, "Failed to fetch questions", http.StatusInternalServerError)

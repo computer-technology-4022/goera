@@ -41,7 +41,7 @@ func QuestionEditHandler(w http.ResponseWriter, r *http.Request) {
 	apiPath := fmt.Sprintf("/api/questions/%s", questionID)
 	apiClient := utils.GetAPIClient()
 	var question models.Question
-	err = apiClient.Get(r, apiPath, &question)
+	err = apiClient.Get(r, apiPath,&question)
 	if err != nil {
 		log.Printf("Error fetching question: %v", err)
 		http.Error(w, "Failed to fetch question", http.StatusInternalServerError)

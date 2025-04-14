@@ -2,13 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
-	utils "github.com/computer-technology-4022/goera/internal/util"
+	"github.com/computer-technology-4022/goera/internal/utils"
 )
 
 type loginRequest struct {
@@ -18,24 +19,59 @@ type loginRequest struct {
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "Methode not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	var loginRequest loginRequest
-	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
+	var loginData loginRequest
+
+	// Process form data using our utility function
+	formProcessor := func(r *http.Request) (interface{}, error) {
+		username := r.FormValue("username")
+		password := r.FormValue("password")
+
+		if username == "" || password == "" {
+			return nil, fmt.Errorf("username and password are required")
+		}
+
+		return loginRequest{
+			Username: username,
+			Password: password,
+		}, nil
+	}
+
+	result, err := utils.ProcessRequestData(r, &loginData, formProcessor)
+	if err != nil {
+		if utils.IsFormRequest(r) {
+			http.Redirect(w, r, "/login?error=invalid_form", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	// If the result came from form processing, we need to update loginData
+	if formData, ok := result.(loginRequest); ok {
+		loginData = formData
+	}
+
 	db := database.GetDB()
 	var user models.User
-	if result := db.Where("username = ?", loginRequest.Username).First(&user); result.Error != nil {
+
+	if result := db.Where("username = ?", loginData.Username).First(&user); result.Error != nil {
+		if utils.IsFormRequest(r) {
+			http.Redirect(w, r, "/login?error=invalid_credentials", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
 
-	if !auth.CheckPasswordHash(loginRequest.Password, user.Password) {
+	if !auth.CheckPasswordHash(loginData.Password, user.Password) {
+		if utils.IsFormRequest(r) {
+			http.Redirect(w, r, "/login?error=invalid_credentials", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 		return
 	}
@@ -43,6 +79,10 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	expirationTime := time.Now().Add(168 * time.Hour)
 	token, err := auth.GenerateJWT(user.ID)
 	if err != nil {
+		if utils.IsFormRequest(r) {
+			http.Redirect(w, r, "/login?error=server_error", http.StatusSeeOther)
+			return
+		}
 		http.Error(w, "Failed to generate token", http.StatusInternalServerError)
 		return
 	}
@@ -50,10 +90,17 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 	utils.SetCookie(w, token, "token", expirationTime)
 
 	user.Password = ""
+
+	// Respond based on request type
+	if utils.IsFormRequest(r) {
+		http.Redirect(w, r, "/questions", http.StatusSeeOther)
+		return
+	}
+
+	// Return JSON response for API clients
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"user": user,
-		// "token": token,
 	})
 }
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Create Question - Goera</title>
+    <title>Edit Question - Goera</title>
     <!-- Assuming your CSS paths are correct relative to where this HTML will be served -->
     <link rel="stylesheet" href="/static/stylesheets/index.css" />
     <link rel="stylesheet" href="/static/stylesheets/question_create.css" />
@@ -23,17 +23,18 @@
         <li><a href="/submissions">Submissions</a></li>
         <li><a href="/profile/{{.CurrentUserID}}">Profile</a></li>
         <li><a href="/createQuestion">Create Question</a></li>
-        <li ><a href="/api/logout" style="color: #ff6308; position: absolute; bottom: 30px; left: 0;">Logout</a></li>
+        <li><a href="/api/logout" style="color: #ff6308; position: absolute; bottom: 30px; left: 0;">Logout</a></li>
       </ul>
     </div>
     <div class="home_container">
       <h1 class="home_heading">
-        <span style="color: #ff6308">Create</span> New Question
+        <span style="color: #ff6308">Edit</span> Question
       </h1>
 
       <div class="form_scrollable">
-        <form class="question_form" action="/api/questions" method="POST">
-          <!-- Question Title -->
+        <form class="question_form" action="/api/questions/{{.Question.ID}}" method="POST">
+          <input type="hidden" name="_method" value="PUT">
+          
           <div class="form_group">
             <label for="title" class="form_label">Question Title</label>
             <input
@@ -42,6 +43,7 @@
               name="title"
               class="form_input"
               placeholder="e.g., Two Sum"
+              value="{{.Question.Title}}"
               required
             />
           </div>
@@ -56,7 +58,7 @@
               rows="8"
               placeholder="Describe the problem. You can use markdown or specify if HTML is allowed (e.g., for <code> tags)."
               required
-            ></textarea>
+            >{{.Question.Content}}</textarea>
           </div>
 
           <!-- Time Limit -->
@@ -70,6 +72,7 @@
               placeholder="e.g., 1000"
               min="100"
               step="100"
+              value="{{.Question.TimeLimit}}"
               required
             />
           </div>
@@ -87,9 +90,11 @@
               placeholder="e.g., 256"
               min="32"
               step="32"
+              value="{{.Question.MemoryLimit}}"
               required
             />
           </div>
+          
           <!-- Example Input/Output Container -->
           <div class="form_group">
             <label class="form_label">Example Input/Output</label>
@@ -113,7 +118,7 @@
                       for="sample_input_1"
                       class="form_label"
                       style="font-size: 0.8em"
-                      >Example Input 1</label
+                      >Example Input</label
                     >
                     <textarea
                       id="sample_input_1"
@@ -122,14 +127,14 @@
                       rows="3"
                       placeholder="Input for the first example..."
                       required
-                    ></textarea>
+                    >{{.Question.ExampleInput}}</textarea>
                   </div>
                   <div class="form_group">
                     <label
                       for="sample_output_1"
                       class="form_label"
                       style="font-size: 0.8em"
-                      >Example Output 1</label
+                      >Example Output</label
                     >
                     <textarea
                       id="sample_output_1"
@@ -138,20 +143,11 @@
                       rows="3"
                       placeholder="Expected output for the first example..."
                       required
-                    ></textarea>
+                    >{{.Question.ExampleOutput}}</textarea>
                   </div>
                 </div>
-                <!-- No remove button for the first pair -->
               </div>
             </div>
-            <button
-              type="button"
-              class="secondary_button"
-              onclick="addSampleField()"
-              style="margin-top: 10px"
-            >
-              + Add Another Example
-            </button>
           </div>
 
           <!-- Tags -->
@@ -163,61 +159,18 @@
               name="tags"
               class="form_input"
               placeholder="Comma-separated tags (e.g., array, hashmap, easy)"
+              value="{{.Question.Tags}}"
             />
           </div>
 
           <!-- Submit Button -->
           <div class="form_footer">
             <button type="submit" class="primary_button">
-              Create Question
+              Update Question
             </button>
-            <!-- Or keep "Save as Draft" if that's the workflow -->
           </div>
-
         </form>
       </div>
     </div>
-
-    <script>
-      let sampleCounter = 1; // Start counting from the first pair
-
-      function addSampleField() {
-        sampleCounter++;
-        const container = document.getElementById("samples_container");
-        const newPair = document.createElement("div");
-        newPair.className = "sample_pair";
-        newPair.innerHTML = `
-          <div class="form_columns">
-            <div class="form_group">
-              <label for="sample_input_${sampleCounter}" class="form_label" style="font-size: 0.8em;">Example Input ${sampleCounter}</label>
-              <textarea
-                id="sample_input_${sampleCounter}"
-                name="sample_inputs[]"
-                class="form_textarea"
-                rows="3"
-                placeholder="Input for example ${sampleCounter}..."
-              ></textarea>
-            </div>
-            <div class="form_group">
-              <label for="sample_output_${sampleCounter}" class="form_label" style="font-size: 0.8em;">Example Output ${sampleCounter}</label>
-              <textarea
-                id="sample_output_${sampleCounter}"
-                name="sample_outputs[]"
-                class="form_textarea"
-                rows="3"
-                placeholder="Output for example ${sampleCounter}..."
-              ></textarea>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="remove_button"
-            onclick="this.parentElement.remove()"
-            aria-label="Remove example ${sampleCounter}"
-          >×</button>
-        `;
-        container.appendChild(newPair);
-      }
-    </script>
   </body>
-</html>
+</html> 

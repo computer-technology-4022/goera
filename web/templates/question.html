@@ -16,56 +16,91 @@
   <body class="body">
     <div class="sidebar">
       <h1 class="sidebar-logo"><span style="color: #ff6308">Go</span>era</h1>
-      <ul class="sidebar-nav">
+      <ul class="sidebar-nav" style="position: relative;">
         <li><a href="/questions">Problems</a></li>
         <li><a href="/submissions">Submissions</a></li>
-        <li><a href="/profile/2">Profile</a></li>
+        <li><a href="/profile/{{.CurrentUserID}}">Profile</a></li>
+        <li><a href="/createQuestion">Create Question</a></li>
+        <li><a href="/api/logout" style="color: #ff6308; position: absolute; bottom: 30px; left: 0;">Logout</a></li>
       </ul>
     </div>
+
+    <div class="admin_options">
+      {{if and .IsAdmin .IsPublished}}
+      <form method="POST" action="/api/questions/{{.QuestionID}}/publish">
+        <input type="hidden" name="published" value="false">
+        <button type="submit" class="primary_button">
+          UnPublish
+        </button>
+      </form>
+      {{end}}
+      {{if and .IsAdmin (not .IsPublished)}}
+      <form method="POST" action="/api/questions/{{.QuestionID}}/publish">
+        <input type="hidden" name="published" value="true">
+        <button type="submit" class="primary_button">
+          Publish
+        </button>
+      </form>
+      {{end}}
+      {{if or .IsAdmin .IsOwner}}
+      <a href="/edit/{{.QuestionID}}">
+        <button class="primary_button">
+          Edit
+        </button>
+      </a>
+      {{end}}
+    </div>
+
+    {{if .ErrorMessage}}
+    <div class="error_message" style="color: #ff3333; text-align: center; margin: 10px auto; padding: 10px; max-width: 600px; background-color: #ffeeee; border-radius: 5px;">
+      {{.ErrorMessage}}
+    </div>
+    {{end}}
+    
+    {{if .SuccessMessage}}
+    <div class="success_message" style="color: #006600; text-align: center; margin: 10px auto; padding: 10px; max-width: 600px; background-color: #eeffee; border-radius: 5px;">
+      {{.SuccessMessage}}
+    </div>
+    {{end}}
+    
     <div
       class="home_container_2"
       style="height: fit-content; padding-top: 45px; padding-bottom: 45px"
     >
       <!-- Question Title -->
-      <h2 class="question_detail_title">Two Sum</h2>
+      <h2 class="question_detail_title">{{.Title}}</h2>
 
       <!-- Question Statement -->
       <div class="question_section">
         <h3 class="section_title">Statement</h3>
         <p class="section_content">
-          Given an array of integers <code>nums</code> and an integer
-          <code>target</code>, return indices of the two numbers such that they
-          add up to <code>target</code>. You may assume that each input would
-          have exactly one solution, and you may not use the same element twice.
-          You can return the answer in any order.
+          {{.Statement}}
         </p>
       </div>
 
       <!-- Time Limit -->
       <div class="question_section">
         <h3 class="section_title">Time Limit</h3>
-        <p class="section_content">1000 milliseconds</p>
+        <p class="section_content">{{.TimeLimit}} milliseconds</p>
       </div>
 
       <!-- Memory Limit -->
       <div class="question_section">
         <h3 class="section_title">Memory Limit</h3>
-        <p class="section_content">256 MB</p>
+        <p class="section_content">{{.MemoryLimit}} MB</p>
       </div>
 
       <!-- Input -->
       <div class="question_section">
         <h3 class="section_title">Input</h3>
-        <pre class="section_content code_block">
-nums = [2, 7, 11, 15]
-target = 9</pre
+        <pre class="section_content code_block">{{.ExampleInput}}</pre
         >
       </div>
 
       <!-- Expected Output -->
       <div class="question_section">
         <h3 class="section_title">Expected Output</h3>
-        <pre class="section_content code_block">[0, 1]</pre>
+        <pre class="section_content code_block">{{.ExampleOutput}}</pre>
       </div>
 
       <!-- File Upload Section -->
@@ -80,18 +115,12 @@ target = 9</pre
             accept=".cpp,.java,.py,.js,.psd"
             required
           />
-          <button onsubmit="" type="submit" class="primary_button">
+          <button class="primary_button">
             Submit
           </button>
         </form>
       </div>
 
-      <!-- Back Button -->
-      <a href="/questions" style="text-decoration: none; color: inherit">
-        <div style="width: 100%; margin-top: 30px">
-          <button class="primary_button">Back to Problems</button>
-        </div>
-      </a>
     </div>
   </body>
 </html>

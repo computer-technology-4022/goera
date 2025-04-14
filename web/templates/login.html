@@ -17,7 +17,16 @@
       <h1 style="text-align: center" class="home_heading">
         <span style="color: #ff6308">Go</span>era
       </h1>
-      <form class="login_form">
+      {{if .ErrorMessage}}
+      <div style="color: #ff3333; text-align: center; margin-bottom: 15px;">
+        {{.ErrorMessage}}
+      </div>
+      {{end}}
+      <form 
+        class="login_form"
+        method="POST"
+        action="/api/login"
+      >
         <div class="form_group">
           <label for="username" class="form_label">Username</label>
           <input

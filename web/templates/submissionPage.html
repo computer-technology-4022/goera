@@ -34,10 +34,10 @@
         <div class="submission_card">
           <div class="submission_info">
             <h3 class="question_title"><span style="">{{.QuestionName}}</span>
-            <span class="submission_date">{{.SubmissionDate.Format "2006-01-02 15:04"}}</span>
+            <span class="submission_date">{{.SubmissionTime.Format "2006-01-02 15:04"}}</span>
           </div>
-          <span class="status {{.Status | statusToClass}}">
-            {{.Status | statusToString}}
+          <span class="status {{.JudgeStatus | statusToClass}}">
+            {{.JudgeStatus | statusToString}}
           </span>
         </div>
         {{end}}
@@ -53,7 +53,12 @@
         <button class="pagination_button" disabled>Previous</button>
         {{end}}
 
-        <span class="current_page">Page {{.Page}} of {{.TotalPages}}</span>
+        <span class="current_page">
+          Page {{.Page}} of {{.TotalPages}} 
+          (Showing {{if eq .TotalItems 0}}0{{else}}{{add (mul (sub .Page 1) .PageSize) 1}}{{end}}
+          - {{min (mul .Page .PageSize) .TotalItems}} 
+          of {{.TotalItems}} submissions)
+        </span>
 
         {{if lt .Page .TotalPages}}
         <a href="/submissions?page={{add .Page 1}}">

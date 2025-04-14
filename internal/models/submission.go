@@ -32,11 +32,11 @@ type Submission struct {
 	MemoryUsage    int         `json:"memoryUsage"`    // Memory usage (megabytes)
 	SubmissionTime time.Time   `json:"submissionTime"` // Submission time
 	QuestionID     uint        `json:"questionId"`     // Reference to the question
+	QuestionName   string      `json:"questionName"`   // Name of the question
 	Question       Question    `json:"-" gorm:"foreignKey:QuestionID"`
 	UserID         uint        `json:"userId"` // Reference to the user
 	User           User        `json:"-" gorm:"foreignKey:UserID"`
 }
-
 
 func MigrateSubmission(db *gorm.DB) error {
 	err := db.AutoMigrate(&Submission{})

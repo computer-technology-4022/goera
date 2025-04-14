@@ -1,34 +1,34 @@
 package handler
 
 import (
+	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"strconv"
-	"time"
+
+	"github.com/computer-technology-4022/goera/internal/auth"
+	"github.com/computer-technology-4022/goera/internal/models"
+	"github.com/computer-technology-4022/goera/internal/utils"
 )
 
-type SubmissionStatus int
-
-const (
-	Pending      SubmissionStatus = iota
-	OK                            // 1
-	CompileError                  // 2
-	WrongAnswer                   // 3
-	MemoryLimit                   // 4
-	TimeLimit                     // 5
-	RuntimeError                  // 6
-)
-
-type Submission struct {
-	QuestionName   string
-	SubmissionDate time.Time
-	Status         SubmissionStatus
+// SubmissionPageData holds the data needed for the submissions page template
+type SubmissionPageData struct {
+	Submissions   []models.Submission
+	Page          int
+	PageSize      int
+	TotalItems    int64
+	TotalPages    int
+	CurrentUserID uint
 }
 
-type SubmissionsPageData struct {
-	Submissions []Submission
-	Page        int
-	TotalPages  int
+// SubmissionAPIResponse matches the API's response format
+type SubmissionAPIResponse struct {
+	Data       []models.Submission `json:"data"`
+	Page       int                 `json:"page"`
+	PageSize   int                 `json:"page_size"`
+	TotalItems int64               `json:"total_items"`
+	TotalPages int                 `json:"total_pages"`
 }
 
 func SubmissionPageHandler(w http.ResponseWriter, r *http.Request) {
@@ -39,78 +39,58 @@ func SubmissionPageHandler(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 
-	// Mock data - replace with database query
-	allSubmissions := []Submission{
-		{QuestionName: "Two Sum", SubmissionDate: time.Now(), Status: OK},
-		{QuestionName: "Reverse String", SubmissionDate: time.Now().Add(-1 * time.Hour), Status: Pending},
-		{QuestionName: "Palindrome", SubmissionDate: time.Now().Add(-2 * time.Hour), Status: WrongAnswer},
-		{QuestionName: "Tree Traversal", SubmissionDate: time.Now().Add(-3 * time.Hour), Status: TimeLimit},
-		{QuestionName: "Two Sum", SubmissionDate: time.Now(), Status: OK},
-		{QuestionName: "Reverse String", SubmissionDate: time.Now().Add(-1 * time.Hour), Status: Pending},
-		{QuestionName: "Palindrome", SubmissionDate: time.Now().Add(-2 * time.Hour), Status: WrongAnswer},
-		{QuestionName: "Tree Traversal", SubmissionDate: time.Now().Add(-3 * time.Hour), Status: TimeLimit},
-		{QuestionName: "Two Sum", SubmissionDate: time.Now(), Status: OK},
-		{QuestionName: "Reverse String", SubmissionDate: time.Now().Add(-1 * time.Hour), Status: Pending},
-		{QuestionName: "Palindrome", SubmissionDate: time.Now().Add(-2 * time.Hour), Status: WrongAnswer},
-		{QuestionName: "Tree Traversal", SubmissionDate: time.Now().Add(-3 * time.Hour), Status: TimeLimit},
+	// Fetch submissions from the API with pagination
+	apiPath := fmt.Sprintf("/api/submissions?page=%d&page_size=5", page)
+	apiClient := utils.GetAPIClient()
+	var apiResponse SubmissionAPIResponse
+	err = apiClient.Get(r, apiPath, &apiResponse)
+	if err != nil {
+		log.Printf("Error fetching submissions: %v", err)
+		http.Error(w, "Failed to fetch submissions", http.StatusInternalServerError)
+		return
 	}
 
-	// Pagination calculations
-	submissionsPerPage := 5
-	totalPages := (len(allSubmissions) + submissionsPerPage - 1) / submissionsPerPage
-	start := (page - 1) * submissionsPerPage
-	end := start + submissionsPerPage
-	if end > len(allSubmissions) {
-		end = len(allSubmissions)
-	}
+	// Get current user ID for the profile link
+	currentUserID, _ := auth.UserIDFromContext(r.Context()) // Ignore error, default to 0 if not found
 
-	paginatedSubmissions := allSubmissions[start:end]
-
-	data := SubmissionsPageData{
-		Submissions: paginatedSubmissions,
-		Page:        page,
-		TotalPages:  totalPages,
+	data := SubmissionPageData{
+		Submissions:   apiResponse.Data,
+		Page:          apiResponse.Page,
+		PageSize:      apiResponse.PageSize,
+		TotalItems:    apiResponse.TotalItems,
+		TotalPages:    apiResponse.TotalPages,
+		CurrentUserID: currentUserID,
 	}
 
 	// Template functions
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
 		"add": func(a, b int) int { return a + b },
-		"statusToString": func(s SubmissionStatus) string {
-			switch s {
-			case Pending:
-				return "Pending"
-			case OK:
-				return "OK"
-			case CompileError:
-				return "Compile Error"
-			case WrongAnswer:
-				return "Wrong Answer"
-			case MemoryLimit:
-				return "Memory Limit"
-			case TimeLimit:
-				return "Time Limit"
-			case RuntimeError:
-				return "Runtime Error"
-			default:
-				return "Unknown"
+		"mul": func(a, b int) int { return a * b },
+		"min": func(a int, b int64) int64 {
+			if int64(a) < b {
+				return int64(a)
 			}
+			return b
 		},
-		"statusToClass": func(s SubmissionStatus) string {
+		"statusToString": func(s models.JudgeStatus) string {
+			return string(s)
+		},
+		"statusToClass": func(s models.JudgeStatus) string {
 			switch s {
-			case Pending:
+			case models.Pending:
 				return "pending"
-			case OK:
+			case models.Accepted:
 				return "ok"
-			case CompileError:
+			case models.CompilationError:
 				return "compile-error"
-			case WrongAnswer:
+			case models.Rejected:
 				return "wrong-answer"
-			case MemoryLimit:
+			case models.MemoryLimitExceeded:
 				return "memory-limit"
-			case TimeLimit:
+			case models.TimeLimitExceeded:
 				return "time-limit"
-			case RuntimeError:
+			case models.RuntimeError:
 				return "runtime-error"
 			default:
 				return "unknown"
@@ -119,12 +99,17 @@ func SubmissionPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Template execution
-	tmpl := template.Must(template.New("submissionPage.html").Funcs(funcMap).ParseFiles(
-		"web/templates/submissionPage.html",
-	))
-
-	err = tmpl.Execute(w, data)
+	tmpl, err := template.New("submissionPage.html").Funcs(funcMap).ParseFiles("web/templates/submissionPage.html")
 	if err != nil {
+		log.Printf("Error parsing submission template: %v", err)
+		http.Error(w, "Internal server error (template parse)", http.StatusInternalServerError)
+		return
+	}
+
+	err = tmpl.ExecuteTemplate(w, "submissionPage.html", data)
+	if err != nil {
+		log.Printf("Error executing submission template: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 }

@@ -59,13 +59,26 @@ func getUserSubmissions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var submissions []models.Submission
-	result := db.Where("user_id = ?", userID).Find(&submissions)
-	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
-		http.Error(w, "Failed to retrieve submissions", http.StatusInternalServerError)
-		return
+	// Parse pagination parameters
+	page := 1
+	pageSize := 5 // Default page size for submissions
+
+	if pageParam := r.URL.Query().Get("page"); pageParam != "" {
+		if parsedPage, err := strconv.Atoi(pageParam); err == nil && parsedPage > 0 {
+			page = parsedPage
+		}
 	}
+
+	if pageSizeParam := r.URL.Query().Get("page_size"); pageSizeParam != "" {
+		if parsedPageSize, err := strconv.Atoi(pageSizeParam); err == nil && parsedPageSize > 0 && parsedPageSize <= 100 {
+			pageSize = parsedPageSize
+		}
+	}
+
+	offset := (page - 1) * pageSize
+
+	// Start with a query for the current user's submissions
+	query := db.Where("user_id = ?", userID)
 
 	// Handle query parameters for filtering
 	questionIDStr := r.URL.Query().Get("questionId")
@@ -76,17 +89,41 @@ func getUserSubmissions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var filteredSubmissions []models.Submission
-		for _, submission := range submissions {
-			if submission.QuestionID == uint(questionID) {
-				filteredSubmissions = append(filteredSubmissions, submission)
-			}
-		}
-		submissions = filteredSubmissions
+		// Apply filter directly in database query
+		query = query.Where("question_id = ?", questionID)
+	}
+
+	// Count total matching submissions
+	var totalItems int64
+	if err := query.Model(&models.Submission{}).Count(&totalItems).Error; err != nil {
+		log.Printf("Database error counting submissions: %v", err)
+		http.Error(w, "Failed to count submissions", http.StatusInternalServerError)
+		return
+	}
+
+	// Calculate total pages
+	totalPages := int((totalItems + int64(pageSize) - 1) / int64(pageSize))
+
+	// Order by submission time (newest first) and get paginated results
+	var submissions []models.Submission
+	result := query.Order("submission_time DESC").Limit(pageSize).Offset(offset).Find(&submissions)
+	if result.Error != nil {
+		log.Printf("Database error: %v", result.Error)
+		http.Error(w, "Failed to retrieve submissions", http.StatusInternalServerError)
+		return
+	}
+
+	// Create paginated response
+	response := PaginatedResponse{
+		Data:       submissions,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalItems: totalItems,
+		TotalPages: totalPages,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(submissions); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
@@ -182,6 +219,7 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 		JudgeStatus:    models.Pending,
 		SubmissionTime: time.Now(),
 		QuestionID:     submissionReq.QuestionID,
+		QuestionName:   question.Title,
 		UserID:         userID,
 	}
 

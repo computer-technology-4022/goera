@@ -41,7 +41,7 @@ func main() {
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
 	s.HandleFunc("/logout", api.LogoutHandler).Methods("GET", "POST")
 	s.HandleFunc("/user", api.UsersHandler).Methods("GET", "POST")
-	s.HandleFunc("/users/promote", api.PromoteUserHandler).Methods("PUT")
+	s.HandleFunc("/user/{id:[0-9]+}/promote", api.PromoteUserHandler).Methods("PUT", "POST")
 
 	s.HandleFunc("/questions", api.QuestionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE", "POST")
@@ -49,6 +49,8 @@ func main() {
 
 	s.HandleFunc("/submissions", api.SubmissionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/submissions/{id}", api.SubmissionHandler).Methods("GET")
+
+	s.HandleFunc("/profile/{id:[0-9]+}", api.GetProfileByID).Methods("GET")
 
 	http.Handle("/", r)
 	fmt.Println("Server is running on http://localhost:5000")

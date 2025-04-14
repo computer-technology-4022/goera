@@ -2,12 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/database"
 	"github.com/computer-technology-4022/goera/internal/models"
+	"github.com/gorilla/mux"
 	"gorm.io/gorm"
 )
 
@@ -28,7 +30,7 @@ func UsersHandler(w http.ResponseWriter, r *http.Request) {
 // PromoteUserHandler handles requests to promote a user to admin role
 func PromoteUserHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
-	case http.MethodPut:
+	case http.MethodPut, http.MethodPost: // Handle POST as well
 		promoteUser(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -37,9 +39,17 @@ func PromoteUserHandler(w http.ResponseWriter, r *http.Request) {
 
 // promoteUser promotes a regular user to admin role
 func promoteUser(w http.ResponseWriter, r *http.Request) {
-	var promoteReq UserPromoteRequest
-	if err := json.NewDecoder(r.Body).Decode(&promoteReq); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	vars := mux.Vars(r) // Get path parameters
+	userIDStr := vars["id"]
+	if userIDStr == "" {
+		http.Error(w, "User ID missing in URL path", http.StatusBadRequest)
+		return
+	}
+
+	// Convert userIDStr to uint
+	var targetUserID uint
+	if _, err := fmt.Sscan(userIDStr, &targetUserID); err != nil {
+		http.Error(w, "Invalid User ID format", http.StatusBadRequest)
 		return
 	}
 
@@ -74,7 +84,7 @@ func promoteUser(w http.ResponseWriter, r *http.Request) {
 
 	// Get the user to promote
 	var user models.User
-	result = db.First(&user, promoteReq.UserID)
+	result = db.First(&user, targetUserID)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			http.Error(w, "User not found", http.StatusNotFound)
@@ -94,11 +104,10 @@ func promoteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(user); err != nil {
-		log.Printf("JSON encoding error: %v", err)
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
+	log.Printf("User ID %d promoted to admin successfully.", targetUserID)
+
+	// Redirect back to the profile page instead of returning JSON
+	http.Redirect(w, r, fmt.Sprintf("/profile/%d", targetUserID), http.StatusSeeOther)
 }
 
 func getAllUsers(w http.ResponseWriter, r *http.Request) {
@@ -132,9 +141,10 @@ func getAllUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func getUserById(w http.ResponseWriter, r *http.Request) {
-	id := r.Header.Get("userID")
+	vars := mux.Vars(r) // Get path parameters
+	id := vars["id"]    // Get ID from path
 	if id == "" {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		http.Error(w, "User ID missing in URL path", http.StatusBadRequest)
 		return
 	}
 	db := database.GetDB()

@@ -33,14 +33,13 @@ func main() {
 	r.HandleFunc("/question/{id:[0-9]+}", handler.QuestionHandler)
 	r.HandleFunc("/edit/{id:[0-9]+}", handler.QuestionEditHandler)
 	r.HandleFunc("/submissions", handler.SubmissionPageHandler)
-	r.HandleFunc("/createQuestion", handler.QuestionCreatorHandler)
+	r.HandleFunc("/createQuestion", handler.QuestionCreateHandler)
 	r.HandleFunc("/profile/{id:[0-9]+}", handler.ProfileHandler)
 
 	s := r.PathPrefix("/api").Subrouter()
 	s.HandleFunc("/login", api.LoginHandler).Methods("GET", "POST")
 	s.HandleFunc("/register", api.RegisterHandler).Methods("GET", "POST")
 	s.HandleFunc("/logout", api.LogoutHandler).Methods("GET", "POST")
-	s.HandleFunc("/user", api.UsersHandler).Methods("GET", "POST")
 	s.HandleFunc("/user/{id:[0-9]+}/promote", api.PromoteUserHandler).Methods("PUT", "POST")
 
 	s.HandleFunc("/questions", api.QuestionsHandler).Methods("GET", "POST")
@@ -49,8 +48,6 @@ func main() {
 
 	s.HandleFunc("/submissions", api.SubmissionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/submissions/{id}", api.SubmissionHandler).Methods("GET")
-
-	s.HandleFunc("/profile/{id:[0-9]+}", api.GetProfileByID).Methods("GET")
 
 	http.Handle("/", r)
 	fmt.Println("Server is running on http://localhost:5000")

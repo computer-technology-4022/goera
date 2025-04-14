@@ -13,20 +13,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserPromoteRequest represents the request body for promoting a user to admin
-type UserPromoteRequest struct {
-	UserID uint `json:"userId"`
-}
-
-func UsersHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		getUserById(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
 // PromoteUserHandler handles requests to promote a user to admin role
 func PromoteUserHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -135,33 +121,6 @@ func getAllUsers(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(users); err != nil {
-		log.Printf("JSON encoding error: %v", err)
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
-}
-
-func getUserById(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r) // Get path parameters
-	id := vars["id"]    // Get ID from path
-	if id == "" {
-		http.Error(w, "User ID missing in URL path", http.StatusBadRequest)
-		return
-	}
-	db := database.GetDB()
-	var user models.User
-	result := db.First(&user, id)
-	if result.Error != nil {
-		log.Printf("Database error: %v", result.Error)
-		if result.Error == gorm.ErrRecordNotFound {
-			http.Error(w, "User not found", http.StatusNotFound)
-		} else {
-			http.Error(w, "Failed to retrieve user", http.StatusInternalServerError)
-		}
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(user); err != nil {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}

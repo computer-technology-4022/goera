@@ -57,7 +57,7 @@ func QuestionsHandler(w http.ResponseWriter, r *http.Request) {
 		TotalPages:    apiResponse.TotalPages,
 		CurrentUserID: currentUserID, // Populate the new field
 	}
-
+	// fmt.Println(currentUserID)
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
 		"add": func(a, b int) int { return a + b },

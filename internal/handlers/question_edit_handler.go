@@ -13,8 +13,9 @@ import (
 )
 
 type QuestionEditData struct {
-	Question     models.Question
-	ErrorMessage string
+	Question      models.Question
+	ErrorMessage  string
+	CurrentUserID uint
 }
 
 func QuestionEditHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +57,8 @@ func QuestionEditHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare data for the template
 	data := QuestionEditData{
-		Question: question,
+		Question:      question,
+		CurrentUserID: userID,
 	}
 
 	// Parse and execute the template

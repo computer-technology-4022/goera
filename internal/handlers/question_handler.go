@@ -26,6 +26,7 @@ type QuestionPageData struct {
 	SuccessMessage string
 	ExampleInput   string
 	ExampleOutput  string
+	CurrentUserID  uint
 }
 
 func QuestionHandler(w http.ResponseWriter, r *http.Request) {
@@ -80,6 +81,7 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, exists := auth.UserIDFromContext(r.Context())
 	if exists {
+		data.CurrentUserID = userID
 		user, err := auth.GetUserFromContext(r.Context())
 		if err == nil {
 			data.IsAdmin = user.Role == models.AdminRole

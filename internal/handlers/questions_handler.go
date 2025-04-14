@@ -7,16 +7,18 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/computer-technology-4022/goera/internal/auth"
 	"github.com/computer-technology-4022/goera/internal/models"
 	"github.com/computer-technology-4022/goera/internal/utils"
 )
 
 type QuestionsData struct {
-	Questions  []models.Question
-	Page       int
-	PageSize   int
-	TotalItems int64
-	TotalPages int
+	Questions     []models.Question
+	Page          int
+	PageSize      int
+	TotalItems    int64
+	TotalPages    int
+	CurrentUserID uint
 }
 
 type APIResponse struct {
@@ -44,27 +46,36 @@ func QuestionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	data := QuestionsData{
-		Questions:  apiResponse.Data,
-		Page:       apiResponse.Page,
-		PageSize:   apiResponse.PageSize,
-		TotalItems: apiResponse.TotalItems,
-		TotalPages: apiResponse.TotalPages,
-	}
+	// Get current user ID for the profile link
+	currentUserID, _ := auth.UserIDFromContext(r.Context()) // Ignore error, default to 0 if not found
 
+	data := QuestionsData{
+		Questions:     apiResponse.Data,
+		Page:          apiResponse.Page,
+		PageSize:      apiResponse.PageSize,
+		TotalItems:    apiResponse.TotalItems,
+		TotalPages:    apiResponse.TotalPages,
+		CurrentUserID: currentUserID, // Populate the new field
+	}
 
 	funcMap := template.FuncMap{
 		"sub": func(a, b int) int { return a - b },
 		"add": func(a, b int) int { return a + b },
 	}
 
-	tmpl := template.Must(template.New("questions.html").
-		Funcs(funcMap).ParseFiles("web/templates/questions.html"))
-
-	err = tmpl.Execute(w, data)
+	// Create a new template, add functions, then parse the file
+	tmpl, err := template.New("questions.html").Funcs(funcMap).ParseFiles("web/templates/questions.html")
 	if err != nil {
-		log.Printf("Error executing template: %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		log.Printf("Error parsing questions template: %v", err)
+		http.Error(w, "Internal server error (template parse)", http.StatusInternalServerError)
+		return
+	}
+
+	// Execute the template
+	err = tmpl.ExecuteTemplate(w, "questions.html", data) // Execute by the name provided in New()
+	if err != nil {
+		log.Printf("Error executing questions template: %v", err)
+		// http.Error(w, err.Error(), http.StatusInternalServerError) // Avoid potentially writing headers twice
 		return
 	}
 }

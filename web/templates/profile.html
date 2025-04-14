@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{.Username}} Profile - Goera</title>
+    <title>{{.ProfileUser.Username}} Profile - Goera</title>
     <link rel="stylesheet" href="/static/stylesheets/index.css" />
     <!-- Add any specific profile CSS if needed -->
     <!-- <link rel="stylesheet" href="/static/stylesheets/profile.css" /> -->
@@ -20,7 +20,7 @@
       <ul class="sidebar-nav" style="position: relative;">
         <li><a href="/questions">Problems</a></li>
         <li><a href="/submissions">Submissions</a></li>
-        <li><a href="/profile/2">Profile</a></li>
+        <li><a href="/profile/{{.CurrentUserID}}">Profile</a></li>
         <li><a href="/createQuestion">Create Question</a></li>
         <li><a href="/api/logout" style="color: #ff6308; position: absolute; bottom: 30px; left: 0;">Logout</a></li>
       </ul>
@@ -28,15 +28,16 @@
     <div class="home_container" style="height: fit-content">
       <div class="profile_header">
         <h1 class="home_heading">
-          <span style="color: #ff6308">{{.Username}}</span>'s Profile {{if
-          .IsAdmin}}<span class="admin_badge">ADMIN</span>{{end}}
+          <span style="color: #ff6308">{{.ProfileUser.Username}}</span>'s Profile 
+          {{/* Display ADMIN badge if the profile user is an admin */}}
+          {{if .IsAdmin}}<span class="admin_badge">ADMIN</span>{{end}}
         </h1>
         <p class="join_date">
-          Member since {{.JoinDate.Format "January 2006"}}
+          Member since {{.ProfileUser.CreatedAt.Format "January 2006"}}
         </p>
       </div>
 
-      <!-- Statistics Section -->
+      <!-- Statistics Section (Using placeholder data for now) -->
       <div class="stats_container">
         <div class="stat_card">
           <h3>Attempted</h3>
@@ -52,36 +53,72 @@
         </div>
       </div>
 
-      <!-- Admin Controls (Visible only to admins viewing another profile OR self) -->
-      {{if .IsViewerAdmin}}
+      <!-- Admin Controls: Visible only if logged-in user is Admin AND viewing another user who is NOT already admin -->
+      {{if and .IsViewerAdmin (not .IsAdmin)}}
       <div class="admin_section">
-        <h2>Admin Management</h2>
-        <form action="/admin/toggle-role" method="POST">
-          <input type="hidden" name="userID" value="{{.UserID}}" />
-          <div class="role_control">
-            <p>
-              Current Role: {{if .IsAdmin}}Administrator{{else}}Regular
-              User{{end}}
-            </p>
-            <button
-              type="submit"
-              class="{{if .IsAdmin}}danger_button primary_button{{else}}primary_button{{end}}"
-            >
-              {{if .IsAdmin}}Revoke Admin Role{{else}}Grant Admin Role{{end}}
-            </button>
-          </div>
-        </form>
+
+				<!-- Replace button and JS with a simple form -->
+				<form action="/api/user/{{.ProfileUser.ID}}/promote" method="POST" style="margin-top: 20px;">
+  					<button type="submit" class="primary_button">Make Admin</button>
+				</form>
       </div>
       {{end}}
-
-      <!-- Back Button (New Style) -->
-      <a href="/questions" style="text-decoration: none; color: inherit">
-        <div style="width: 100%; margin-top: 30px">
-          <!-- Adjust margin-top as needed -->
-          <button type="button" class="primary_button">Back to Problems</button>
-        </div>
-      </a>
     </div>
     <!-- End of home_container -->
+
+		<!-- Remove the JavaScript for the old button -->
+    {{/*
+    <script>
+      const makeAdminBtn = document.getElementById('make-admin-btn');
+      const adminStatus = document.getElementById('admin-status');
+      const adminError = document.getElementById('admin-error');
+
+      if (makeAdminBtn) {
+        makeAdminBtn.addEventListener('click', function() {
+          const userId = this.getAttribute('data-user-id');
+          const url = `/api/user/${userId}/promote`;
+
+          // Disable button to prevent multiple clicks
+          this.disabled = true;
+          this.textContent = 'Processing...';
+          adminStatus.style.display = 'none';
+          adminError.style.display = 'none';
+
+          fetch(url, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              // Add other headers if needed (like CSRF token)
+            },
+            // No body needed as per the updated API endpoint
+          })
+          .then(response => {
+            if (!response.ok) {
+              // Throw an error to be caught by the catch block
+              return response.text().then(text => { throw new Error(text || 'Network response was not ok') });
+            }
+            return response.json(); // Or response.text() if no JSON is returned
+          })
+          .then(data => {
+            console.log('Success:', data);
+            adminStatus.style.display = 'block';
+            makeAdminBtn.textContent = 'User is Admin'; // Change button text
+            // Optionally hide the button section entirely after success
+             // document.querySelector('.admin_section').style.display = 'none';
+            // Optionally reload the page to show the ADMIN badge
+             window.location.reload();
+          })
+          .catch((error) => {
+            console.error('Error:', error);
+            adminError.textContent = `Failed to promote user: ${error.message}`;
+            adminError.style.display = 'block';
+            makeAdminBtn.disabled = false; // Re-enable button on error
+            makeAdminBtn.textContent = 'Make Admin';
+          });
+        });
+      }
+    </script>
+		*/}}
+
   </body>
 </html>

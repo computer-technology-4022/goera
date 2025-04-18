@@ -81,7 +81,7 @@ func SubmissionPageHandler(w http.ResponseWriter, r *http.Request) {
 			case models.Pending:
 				return "pending"
 			case models.Accepted:
-				return "ok"
+				return "Accepted"
 			case models.CompilationError:
 				return "compile-error"
 			case models.Rejected:

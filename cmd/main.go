@@ -14,6 +14,7 @@ import (
 )
 
 func main() {
+
 	config.Init()
 	err := database.InitDB()
 	if err != nil {

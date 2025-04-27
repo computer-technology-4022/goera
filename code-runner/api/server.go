@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 // RunRequest holds the configuration for a judge run.
@@ -21,11 +22,9 @@ type RunRequest struct {
 	DockerImage   string  `json:"dockerImage,omitempty"`
 }
 
-// RunResponse returns the output from the code-runner CLI.
+// RunResponse returns the status of the judge run.
 type RunResponse struct {
-	Stdout string `json:"stdout"`
-	Stderr string `json:"stderr"`
-	Error  string `json:"error,omitempty"`
+	Status string `json:"status"`
 }
 
 // runHandler handles POST /run and calls the code-runner CLI.
@@ -117,13 +116,36 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 
 	err = cmd.Run()
 
-	resp := RunResponse{
-		Stdout: stdoutBuf.String(),
-		Stderr: stderrBuf.String(),
+	// Parse CLI output to extract the final judge result
+	rawOut := stdoutBuf.String()
+	statusVal := "runtime_error"
+	// scan lines from bottom for "Overall Result: ..."
+	lines := strings.Split(rawOut, "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		line := lines[i]
+		if strings.HasPrefix(line, "Overall Result:") {
+			parts := strings.SplitN(line, ":", 2)
+			if len(parts) == 2 {
+				rawStatus := strings.TrimSpace(parts[1])
+				switch rawStatus {
+				case "Accepted":
+					statusVal = "accepted"
+				case "CompileError":
+					statusVal = "compilation_error"
+				case "WrongAnswer":
+					statusVal = "WrongAnswer"
+				case "MemoryLimit":
+					statusVal = "memory_limit_exceeded"
+				case "TimeLimit":
+					statusVal = "time_limit_exceeded"
+				case "RuntimeError":
+					statusVal = "runtime_error"
+				}
+			}
+			break
+		}
 	}
-	if err != nil {
-		resp.Error = err.Error()
-	}
+	resp := RunResponse{Status: statusVal}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err != nil {

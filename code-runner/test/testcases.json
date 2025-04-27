@@ -5,7 +5,7 @@
     },
     {
       "input": "10 5",
-      "expectedOutput": "15"
+      "expectedOutput": "16"
     },
     {
       "input": "-5 5",

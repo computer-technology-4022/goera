@@ -5,77 +5,108 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
-	"time"
+	"sync"
 )
 
-// JudgeStatus represents the current status of a submission.
-type JudgeStatus string
-
-const (
-	Pending             JudgeStatus = "pending"
-	Judging             JudgeStatus = "judging"
-	Accepted            JudgeStatus = "accepted"
-	Rejected            JudgeStatus = "rejected"
-	TimeLimitExceeded   JudgeStatus = "time_limit_exceeded"
-	MemoryLimitExceeded JudgeStatus = "memory_limit_exceeded"
-	RuntimeError        JudgeStatus = "runtime_error"
-	CompilationError    JudgeStatus = "compilation_error"
-)
-
-// Submission mirrors the struct returned by /fetchNext
 type Submission struct {
-	SubmissionID   string    `json:"submissionId"`
-	SourcePath     string    `json:"sourcePath"`
-	TestcasesPath  string    `json:"testCasesPath"`
-	TimeLimit      string    `json:"timeLimit,omitempty"`
-	MemoryLimit    string    `json:"memoryLimit,omitempty"`
-	CPUCount       string    `json:"cpuCount,omitempty"`
-	DockerImage    string    `json:"dockerImage,omitempty"`
-	Status         JudgeStatus `json:"status"`
+	SourcePath    string `json:"sourcePath"`
+	TestcasesPath string `json:"testcasesPath"`
+	TimeLimit     string `json:"timeLimit"`
+	MemoryLimit   string `json:"memoryLimit"`
+	CPUCount      string `json:"cpuCount"`
+	DockerImage   string `json:"dockerImage"`
 }
 
-// RunResponse is the JSON returned by CodeRunner API
 type RunResponse struct {
-	Status string `json:"status"`
+	// Define fields based on what code-runner returns
+	Success bool   `json:"success"`
+	Output  string `json:"output"`
 }
 
-// fetchNext polls the Judge API for the next submission
-func fetchNext() (*Submission, error) {
-	req, err := http.NewRequest("POST", "http://localhost:8082/fetchNext", nil)
-	if err != nil {
-		return nil, err
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+var (
+	queue []*Submission
+	mu    sync.Mutex
+	busy  bool
+)
 
-	if resp.StatusCode == http.StatusNoContent {
-		// no submissions pending
-		return nil, nil
-	}
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("fetchNext failed: %d %s", resp.StatusCode, string(body))
+func main() {
+	http.HandleFunc("/submit", submitHandler)
+	http.HandleFunc("/runner-done", runnerDoneHandler)
+
+	log.Println("Judge service running on :8080")
+	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+func submitHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
 	}
 
 	var sub Submission
-	if err := json.NewDecoder(resp.Body).Decode(&sub); err != nil {
-		return nil, err
+	if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
 	}
-	return &sub, nil
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if !busy {
+		log.Println("Code-Runner is free. Sending submission immediately.")
+		go processSubmission(&sub)
+		busy = true
+	} else {
+		log.Println("Code-Runner busy. Queuing submission.")
+		queue = append(queue, &sub)
+	}
+
+	w.WriteHeader(http.StatusAccepted)
+	w.Write([]byte("Submission accepted"))
 }
 
-// sendToCodeRunner uploads source/testcases and returns the run result
+func runnerDoneHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
+		return
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if len(queue) > 0 {
+		next := queue[0]
+		queue = queue[1:]
+		log.Println("Sending next submission from queue.")
+		go processSubmission(next)
+		busy = true
+	} else {
+		log.Println("No more submissions. Code-Runner now idle.")
+		busy = false
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+func processSubmission(sub *Submission) {
+	result, err := sendToCodeRunner(sub)
+	if err != nil {
+		log.Printf("Error sending to Code-Runner: %v\n", err)
+		// Optionally handle retries or failure scenarios here
+		return
+	}
+	log.Printf("Code-Runner response: success=%v, output=%s\n", result.Success, result.Output)
+}
+
 func sendToCodeRunner(sub *Submission) (*RunResponse, error) {
 	var buf bytes.Buffer
 	writer := multipart.NewWriter(&buf)
 
-	// attach source file
+	// Attach source file
 	srcFile, err := os.Open(sub.SourcePath)
 	if err != nil {
 		return nil, err
@@ -89,7 +120,7 @@ func sendToCodeRunner(sub *Submission) (*RunResponse, error) {
 		return nil, err
 	}
 
-	// attach testcases file
+	// Attach testcases file
 	testFile, err := os.Open(sub.TestcasesPath)
 	if err != nil {
 		return nil, err
@@ -103,7 +134,7 @@ func sendToCodeRunner(sub *Submission) (*RunResponse, error) {
 		return nil, err
 	}
 
-	// optional fields
+	// Optional fields
 	if sub.TimeLimit != "" {
 		writer.WriteField("timeLimit", sub.TimeLimit)
 	}
@@ -142,24 +173,3 @@ func sendToCodeRunner(sub *Submission) (*RunResponse, error) {
 	}
 	return &result, nil
 }
-
-func main() {
-	fmt.Println("Judge worker started, polling for submissions...")
-	for {
-		sub, err := fetchNext()
-		if err != nil {
-			fmt.Printf("Error fetching next: %v\n", err)
-		} else if sub != nil {
-			fmt.Printf("Processing submission %s\n", sub.SubmissionID)
-			res, err := sendToCodeRunner(sub)
-			if err != nil {
-				fmt.Printf("Error running submission %s: %v\n", sub.SubmissionID, err)
-			} else {
-				// Update submission status based on code-runner result
-				sub.Status = JudgeStatus(res.Status)
-				fmt.Printf("Submission %s status: %s\n", sub.SubmissionID, sub.Status)
-			}
-		}
-		time.Sleep(1 * time.Second)
-	}
-} 

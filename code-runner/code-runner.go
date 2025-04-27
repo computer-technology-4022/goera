@@ -5,9 +5,10 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"encoding/json" // Import the encoding/json package
+	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,12 +21,10 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
-	"github.com/spf13/cobra"
 )
 
-// The Dockerfile content as a Go string
+// Dockerfile content for the judging container
 const dockerfileContent = `
-# ... (dockerfile content remains the same) ...
 FROM golang:1.24-alpine as builder
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
@@ -33,11 +32,9 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN mkdir /app && chown appuser:appgroup /app
 WORKDIR /app
 USER appuser
-# ENTRYPOINT ["/app/program_to_run"] # Entrypoint defined in run command instead
 `
 
 // TestCase represents a single test case with input and expected output.
-// Added JSON tags for clear mapping.
 type TestCase struct {
 	Input    string `json:"input"`
 	Expected string `json:"expectedOutput"`
@@ -56,69 +53,260 @@ const (
 )
 
 // JudgeConfig holds the configuration for the judging process.
-// Added TestCasesPath field.
 type JudgeConfig struct {
 	TimeLimitPerCase time.Duration
 	MemoryLimitMB    uint64
 	CPUCount         float64
 	DockerImageName  string
-	SourceFilePath   string // Path to the user's code file
-	TestCasesPath    string // Path to the test cases JSON file
+	SourceFilePath   string
+	TestCasesPath    string
 }
 
 const DEFAULT_DOCKER_IMAGE = "go-judge-runner:latest"
 
-// Variables to hold flag values
-var (
-	codePath      string
-	testCasesPath string // Added variable for the test cases file path
-	timeLimit     time.Duration
-	memoryLimit   uint64
-	cpuCount      float64
-	dockerImage   string
-)
-
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "judge",
-	Short: "A simple Go code judge",
-	Long: `A simple Go code judge that compiles and runs a user's Go program
-against predefined test cases (loaded from a JSON file) within a Docker container.
-Builds the runner image from an embedded Dockerfile string.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		runJudge()
-	},
+// RunResponse matches the judge service's expected response.
+type RunResponse struct {
+	Success bool   `json:"success"`
+	Output  string `json:"output"`
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+// runHandler handles POST /run and runs the judging logic.
+func runHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse multipart form to get uploaded files and parameters
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+		return
+	}
+
+	// Handle Go source file upload
+	srcFile, _, err := r.FormFile("source")
+	if err != nil {
+		http.Error(w, "Missing source file", http.StatusBadRequest)
+		return
+	}
+	defer srcFile.Close()
+	tmpSrc, err := os.CreateTemp("", "source-*.go")
+	if err != nil {
+		http.Error(w, "Failed to create temp file for source", http.StatusInternalServerError)
+		return
+	}
+	defer os.Remove(tmpSrc.Name())
+	defer tmpSrc.Close()
+	if _, err := io.Copy(tmpSrc, srcFile); err != nil {
+		http.Error(w, "Failed to save source file", http.StatusInternalServerError)
+		return
+	}
+
+	// Handle testcases JSON upload
+	testFile, _, err := r.FormFile("testcases")
+	if err != nil {
+		http.Error(w, "Missing testcases file", http.StatusBadRequest)
+		return
+	}
+	defer testFile.Close()
+	tmpTest, err := os.CreateTemp("", "testcases-*.json")
+	if err != nil {
+		http.Error(w, "Failed to create temp file for test cases", http.StatusInternalServerError)
+		return
+	}
+	defer os.Remove(tmpTest.Name())
+	defer tmpTest.Close()
+	if _, err := io.Copy(tmpTest, testFile); err != nil {
+		http.Error(w, "Failed to save testcases file", http.StatusInternalServerError)
+		return
+	}
+
+	// Read optional form values
+	timeLimitStr := r.FormValue("timeLimit")
+	memoryLimitStr := r.FormValue("memoryLimit")
+	cpuCountStr := r.FormValue("cpuCount")
+	dockerImage := r.FormValue("dockerImage")
+
+	// Parse parameters
+	timeLimit, err := time.ParseDuration(timeLimitStr)
+	if err != nil && timeLimitStr != "" {
+		http.Error(w, "Invalid timeLimit format", http.StatusBadRequest)
+		return
+	}
+	if timeLimitStr == "" {
+		timeLimit = 2 * time.Second // Default
+	}
+
+	var memoryLimit uint64
+	if memoryLimitStr != "" {
+		_, err := fmt.Sscanf(memoryLimitStr, "%d", &memoryLimit)
+		if err != nil {
+			http.Error(w, "Invalid memoryLimit format", http.StatusBadRequest)
+			return
+		}
+	} else {
+		memoryLimit = 64 // Default
+	}
+
+	var cpuCount float64
+	if cpuCountStr != "" {
+		_, err := fmt.Sscanf(cpuCountStr, "%f", &cpuCount)
+		if err != nil {
+			http.Error(w, "Invalid cpuCount format", http.StatusBadRequest)
+			return
+		}
+	} else {
+		cpuCount = 1.0 // Default
+	}
+
+	if dockerImage == "" {
+		dockerImage = DEFAULT_DOCKER_IMAGE // Default
+	}
+
+	// Prepare judge configuration
+	config := JudgeConfig{
+		TimeLimitPerCase: timeLimit,
+		MemoryLimitMB:    memoryLimit,
+		CPUCount:         cpuCount,
+		DockerImageName:  dockerImage,
+		SourceFilePath:   tmpSrc.Name(),
+		TestCasesPath:    tmpTest.Name(),
+	}
+
+	// Run the judging logic
+	result, output, err := runJudge(config)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to run judge: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Prepare response
+	resp := RunResponse{
+		Success: result == Accepted,
+		Output:  output,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
 }
 
-func init() {
-	rootCmd.PersistentFlags().StringVarP(&codePath, "codePath", "c", "", "Path to the Go source code file to judge (required)")
-	rootCmd.MarkPersistentFlagRequired("codePath")
-
-	// Add the flag for the test cases JSON file path
-	rootCmd.PersistentFlags().StringVarP(&testCasesPath, "testCasesPath", "T", "", "Path to the JSON file containing test cases (required)")
-	rootCmd.MarkPersistentFlagRequired("testCasesPath") // Make it required
-
-	rootCmd.PersistentFlags().DurationVarP(&timeLimit, "timeLimit", "t", 2*time.Second, "Time limit per test case (e.g., 1s, 500ms)")
-	rootCmd.PersistentFlags().Uint64VarP(&memoryLimit, "memoryLimit", "m", 64, "Memory limit per test case in MB")
-	rootCmd.PersistentFlags().Float64VarP(&cpuCount, "cpuCount", "p", 1.0, "CPU limit per test case (e.g., 0.5, 1.0)")
-	rootCmd.PersistentFlags().StringVarP(&dockerImage, "dockerImage", "i", DEFAULT_DOCKER_IMAGE, "Name of the Docker image to use/build for running code")
+func main() {
+	http.HandleFunc("/run", runHandler)
+	addr := ":8081"
+	fmt.Printf("CodeRunner service listening on %s\n", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		fmt.Printf("Server error: %v\n", err)
+	}
 }
 
-func main() {
-	Execute() // Start the Cobra application
+// runJudge contains the core judging logic (adapted from CLI).
+func runJudge(config JudgeConfig) (Result, string, error) {
+	// Initialize output buffer to capture logs
+	var outputBuf bytes.Buffer
+	logWriter := io.MultiWriter(os.Stdout, &outputBuf)
+	fmt.Fprintln(logWriter, "Initialized judge configuration")
+	fmt.Fprintf(logWriter, "Loading test cases from: %s\n", config.TestCasesPath)
+
+	// Load test cases
+	testCases, err := loadTestCasesFromFile(config.TestCasesPath)
+	if err != nil {
+		fmt.Fprintf(logWriter, "Error loading test cases: %v\n", err)
+		return RuntimeError, outputBuf.String(), err
+	}
+	fmt.Fprintf(logWriter, "Loaded %d test cases.\n", len(testCases))
+	if len(testCases) == 0 {
+		fmt.Fprintln(logWriter, "Warning: No test cases loaded. Judge will finish without running tests.")
+	}
+
+	// Initialize Docker client
+	apiClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		fmt.Fprintf(logWriter, "Failed to create Docker client: %v\n", err)
+		return RuntimeError, outputBuf.String(), err
+	}
+	defer apiClient.Close()
+	fmt.Fprintln(logWriter, "Initialized Docker client")
+
+	// Build Docker image
+	fmt.Fprintf(logWriter, "Building Docker image '%s' from embedded Dockerfile string...\n", config.DockerImageName)
+	err = buildDockerImageFromString(apiClient, config)
+	if err != nil {
+		fmt.Fprintf(logWriter, "Error building Docker image: %v\n", err)
+		fmt.Fprintf(logWriter, "Result: %s\n", CompileError)
+		return CompileError, outputBuf.String(), err
+	}
+	fmt.Fprintln(logWriter, "Docker image built successfully.")
+
+	// Compile source code
+	fmt.Fprintf(logWriter, "Judging source file: %s\n", config.SourceFilePath)
+	fmt.Fprintln(logWriter, "Compiling source code on the host...")
+	executablePath, compileLog, err := compileProgram(config.SourceFilePath)
+	if err != nil {
+		fmt.Fprintf(logWriter, "Result: %s\n", CompileError)
+		fmt.Fprintf(logWriter, "Compilation Log:\n%s\n", compileLog)
+		return CompileError, outputBuf.String(), err
+	}
+	defer os.Remove(executablePath)
+	fmt.Fprintf(logWriter, "Compilation successful. Host Executable: %s\n", executablePath)
+
+	// Log resource limits
+	if config.MemoryLimitMB > 0 {
+		fmt.Fprintf(logWriter, "Memory Limit per Test Case: %d MB\n", config.MemoryLimitMB)
+	}
+	if config.CPUCount > 0 {
+		fmt.Fprintf(logWriter, "CPU Limit per Test Case: %.2f cores\n", config.CPUCount)
+	}
+	fmt.Fprintf(logWriter, "Time Limit per Test Case: %s\n", config.TimeLimitPerCase)
+
+	// Get absolute path for volume mounting
+	absExecutablePath, err := filepath.Abs(executablePath)
+	if err != nil {
+		fmt.Fprintf(logWriter, "Error getting absolute path for executable: %v\n", err)
+		return RuntimeError, outputBuf.String(), err
+	}
+	containerExecutablePath := "/app/program_to_run"
+
+	// Run test cases
+	overallResult := Accepted
+	if len(testCases) == 0 {
+		fmt.Fprintln(logWriter, "No test cases to run.")
+		overallResult = Accepted
+	} else {
+		for i, tc := range testCases {
+			fmt.Fprintf(logWriter, "\n--- Running Test Case %d / %d ---\n", i+1, len(testCases))
+			fmt.Fprintf(logWriter, "Input:\n%s\n", tc.Input)
+
+			result, output, errMsg := runTestCaseInDocker(
+				apiClient,
+				absExecutablePath,
+				containerExecutablePath,
+				tc,
+				config,
+			)
+
+			fmt.Fprintf(logWriter, "Expected Output:\n%s\n", tc.Expected)
+			fmt.Fprintf(logWriter, "Actual Output:\n%s\n", output)
+			if errMsg != "" {
+				fmt.Fprintf(logWriter, "Error Details:\n%s\n", errMsg)
+			}
+			fmt.Fprintf(logWriter, "Test Case %d Result: %s\n", i+1, result)
+
+			if result != Accepted {
+				overallResult = result
+				break
+			}
+		}
+	}
+
+	fmt.Fprintf(logWriter, "\n--- Judge Finished ---\n")
+	fmt.Fprintf(logWriter, "Overall Result: %s\n", overallResult)
+	return overallResult, outputBuf.String(), nil
 }
 
 // loadTestCasesFromFile reads a JSON file and returns a slice of TestCase structs.
 func loadTestCasesFromFile(filePath string) ([]TestCase, error) {
-	// Check if file exists first for a clearer error message
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("test cases file not found: %s", filePath)
 	}
@@ -128,23 +316,17 @@ func loadTestCasesFromFile(filePath string) ([]TestCase, error) {
 		return nil, fmt.Errorf("failed to read test cases file '%s': %w", filePath, err)
 	}
 
-	// Handle empty file case explicitly
 	if len(bytes.TrimSpace(fileBytes)) == 0 {
 		fmt.Printf("Warning: Test cases file '%s' is empty.\n", filePath)
-		return []TestCase{}, nil // Return empty slice, not an error
+		return []TestCase{}, nil
 	}
 	if !json.Valid(fileBytes) {
-		// You might want more sophisticated validation depending on needs
 		return nil, fmt.Errorf("invalid JSON format in test cases file: %s", filePath)
 	}
 
 	var testCases []TestCase
-	// Ensure the JSON is an array, otherwise Unmarshal might succeed partially
-	// For simplicity, we rely on Unmarshal's behavior for now.
-	// A more robust check would unmarshal into an interface{} first and check type.
 	err = json.Unmarshal(fileBytes, &testCases)
 	if err != nil {
-		// Provide more context on JSON parsing errors if possible
 		syntaxErr, ok := err.(*json.SyntaxError)
 		if ok {
 			return nil, fmt.Errorf("JSON syntax error in '%s' at offset %d: %w", filePath, syntaxErr.Offset, err)
@@ -156,137 +338,15 @@ func loadTestCasesFromFile(filePath string) ([]TestCase, error) {
 		return nil, fmt.Errorf("failed to parse JSON test cases from '%s': %w", filePath, err)
 	}
 
-	// Optional: Add validation for individual test cases (e.g., ensure fields aren't empty)
-	// for i, tc := range testCases {
-	//  if tc.Input == "" || tc.Expected == "" {
-	//      fmt.Printf("Warning: Test case %d in '%s' has empty input or expected output.\n", i+1, filePath)
-	//  }
-	// }
-
 	return testCases, nil
 }
 
-// runJudge contains the core logic
-func runJudge() {
-	// Configuration for the judge (Defaults can be overridden by flags)
-	config := JudgeConfig{
-		TimeLimitPerCase: timeLimit,     // Use flag value
-		MemoryLimitMB:    memoryLimit,   // Use flag value
-		CPUCount:         cpuCount,      // Use flag value
-		DockerImageName:  dockerImage,   // Use flag value
-		SourceFilePath:   codePath,      // Use flag value
-		TestCasesPath:    testCasesPath, // Use flag value
-	}
-
-	fmt.Println("initialized judge configuration")
-	fmt.Printf("Loading test cases from: %s\n", config.TestCasesPath)
-
-	// Load test cases from the specified file
-	testCases, err := loadTestCasesFromFile(config.TestCasesPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading test cases: %v\n", err)
-		os.Exit(1) // Exit if test cases cannot be loaded
-	}
-	fmt.Printf("Loaded %d test cases.\n", len(testCases))
-	if len(testCases) == 0 {
-		fmt.Println("Warning: No test cases loaded. Judge will finish without running tests.")
-		// Decide whether to exit or continue
-		// os.Exit(0) // Or just let it proceed and report "Accepted" vacuously
-	}
-
-	// Initialize Docker client
-	apiClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to create Docker client: %v\n", err)
-		os.Exit(1)
-	}
-	defer apiClient.Close()
-	fmt.Println("initialized docker client")
-
-	// Build Docker Image from string
-	fmt.Printf("Building Docker image '%s' from embedded Dockerfile string...\n", config.DockerImageName)
-	err = buildDockerImageFromString(apiClient, config)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error building Docker image: %v\n", err)
-		fmt.Printf("Result: %s\n", CompileError)
-		os.Exit(1)
-	}
-	fmt.Println("Docker image built successfully.")
-
-	// Compile User's Source Code
-	fmt.Printf("Judging source file: %s\n", config.SourceFilePath)
-	fmt.Println("Compiling source code on the host...")
-	executablePath, compileLog, err := compileProgram(config.SourceFilePath)
-	if err != nil {
-		fmt.Printf("Result: %s\n", CompileError)
-		fmt.Printf("Compilation Log:\n%s\n", compileLog)
-		os.Exit(0)
-	}
-	defer os.Remove(executablePath)
-	fmt.Printf("Compilation successful. Host Executable: %s\n", executablePath)
-
-	// --- Resource Limits Info ---
-	if config.MemoryLimitMB > 0 {
-		fmt.Printf("Memory Limit per Test Case: %d MB\n", config.MemoryLimitMB)
-	}
-	if config.CPUCount > 0 {
-		fmt.Printf("CPU Limit per Test Case: %.2f cores\n", config.CPUCount)
-	}
-	fmt.Printf("Time Limit per Test Case: %s\n", config.TimeLimitPerCase)
-	// --- End Resource Limits Info ---
-
-	// Get absolute path for volume mounting
-	absExecutablePath, err := filepath.Abs(executablePath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting absolute path for executable: %v\n", err)
-		os.Exit(1)
-	}
-	containerExecutablePath := "/app/program_to_run"
-
-	// Run test cases from the loaded slice
-	overallResult := Accepted
-	// Handle the case where no test cases were loaded
-	if len(testCases) == 0 {
-		fmt.Println("No test cases to run.")
-		overallResult = Accepted // Or perhaps a different status like "NoTests"
-	} else {
-		for i, tc := range testCases {
-			fmt.Printf("\n--- Running Test Case %d / %d ---\n", i+1, len(testCases))
-			fmt.Printf("Input:\n%s\n", tc.Input) // Use tc.Input
-
-			result, output, errMsg := runTestCaseInDocker(
-				apiClient,
-				absExecutablePath,
-				containerExecutablePath,
-				tc, // Pass the TestCase struct directly
-				config,
-			)
-
-			fmt.Printf("Expected Output:\n%s\n", tc.Expected) // Use tc.Expected
-			fmt.Printf("Actual Output:\n%s\n", output)
-			if errMsg != "" {
-				fmt.Printf("Error Details:\n%s\n", errMsg)
-			}
-			fmt.Printf("Test Case %d Result: %s\n", i+1, result)
-
-			if result != Accepted {
-				overallResult = result
-				break // Stop on the first failed test case
-			}
-		}
-	}
-
-	fmt.Printf("\n--- Judge Finished ---\n")
-	fmt.Printf("Overall Result: %s\n", overallResult)
-}
-
-// --- Other Functions (buildDockerImageFromString, compileProgram, executableSuffix, runTestCaseInDocker) remain unchanged ---
-// buildDockerImageFromString function remains the same
+// buildDockerImageFromString builds a Docker image from the Dockerfile string.
 func buildDockerImageFromString(cli *client.Client, config JudgeConfig) error {
 	ctx := context.Background()
 	tarBuf := new(bytes.Buffer)
 	tw := tar.NewWriter(tarBuf)
-	defer tw.Close() // Ensure writer is closed to flush data
+	defer tw.Close()
 
 	header := &tar.Header{
 		Name:    "Dockerfile",
@@ -300,7 +360,6 @@ func buildDockerImageFromString(cli *client.Client, config JudgeConfig) error {
 	if _, err := tw.Write([]byte(dockerfileContent)); err != nil {
 		return fmt.Errorf("failed to write Dockerfile content to tar: %w", err)
 	}
-	// IMPORTANT: Close the tar writer *before* creating the reader
 	if err := tw.Close(); err != nil {
 		return fmt.Errorf("failed to close tar writer: %w", err)
 	}
@@ -330,7 +389,7 @@ func buildDockerImageFromString(cli *client.Client, config JudgeConfig) error {
 	return nil
 }
 
-// compileProgram function remains the same
+// compileProgram compiles the Go source code.
 func compileProgram(sourceFile string) (executablePath string, compileLog string, err error) {
 	tempDir := os.TempDir()
 	baseName := strings.TrimSuffix(filepath.Base(sourceFile), filepath.Ext(sourceFile))
@@ -351,7 +410,7 @@ func compileProgram(sourceFile string) (executablePath string, compileLog string
 			return "", compileLog, fmt.Errorf("compilation command failed and no executable produced: %w", err)
 		}
 		fmt.Fprintf(os.Stderr, "Warning: Compilation command finished with error (but executable exists): %v\n", err)
-		err = nil // Proceed if executable exists despite warnings
+		err = nil
 	}
 	if _, statErr := os.Stat(executablePath); os.IsNotExist(statErr) {
 		return "", compileLog, fmt.Errorf("compilation finished but executable not found at %s (Compiler Output:\n%s)", executablePath, compileLog)
@@ -359,7 +418,7 @@ func compileProgram(sourceFile string) (executablePath string, compileLog string
 	return executablePath, compileLog, nil
 }
 
-// executableSuffix function remains the same
+// executableSuffix returns the executable file extension based on OS.
 func executableSuffix() string {
 	if runtime.GOOS == "windows" {
 		return ".exe"
@@ -367,12 +426,12 @@ func executableSuffix() string {
 	return ""
 }
 
-// runTestCaseInDocker function remains the same
+// runTestCaseInDocker runs a single test case in a Docker container.
 func runTestCaseInDocker(
 	apiClient *client.Client,
 	hostExecutablePath string,
 	containerExecutablePath string,
-	tc TestCase, // Takes the TestCase struct
+	tc TestCase,
 	config JudgeConfig,
 ) (result Result, output string, errMsg string) {
 	ctx, cancel := context.WithTimeout(context.Background(), config.TimeLimitPerCase+5*time.Second)
@@ -422,7 +481,6 @@ func runTestCaseInDocker(
 		if err := apiClient.ContainerRemove(removeCtx, containerID, removeOpts); err != nil && !client.IsErrNotFound(err) {
 			fmt.Fprintf(os.Stderr, "Warning: Failed to remove container %s: %v\n", containerID, err)
 		} else {
-			// Suppress "removed" message if it was already not found during stop
 			if stopErr == nil || (!client.IsErrNotFound(stopErr) && !strings.Contains(stopErr.Error(), "is already stopped")) {
 				fmt.Printf("Container %s removed.\n", containerID)
 			}
@@ -455,7 +513,6 @@ func runTestCaseInDocker(
 			}
 			close(inputErrChan)
 		}()
-		// Use tc.Input directly
 		_, err := io.WriteString(hijackedResp.Conn, tc.Input+"\n")
 		if err != nil {
 			if err != io.ErrClosedPipe && !strings.Contains(err.Error(), "use of closed network connection") {
@@ -508,7 +565,7 @@ func runTestCaseInDocker(
 		case <-outputWaitCtx.Done():
 			fmt.Fprintf(os.Stderr, "Warning: Timed out waiting for output stream copy to finish for container %s\n", containerID)
 		}
-		outputWaitCancel() // Ensure cancel is called
+		outputWaitCancel()
 
 		actualOutput := strings.TrimSpace(stdoutBuf.String())
 		stderrOutput := strings.TrimSpace(stderrBuf.String())
@@ -526,7 +583,6 @@ func runTestCaseInDocker(
 				}
 			}
 		} else {
-			// Use tc.Expected directly
 			expectedOutputTrimmed := strings.TrimSpace(tc.Expected)
 			if actualOutput != expectedOutputTrimmed {
 				finalResult = WrongAnswer
@@ -545,7 +601,7 @@ func runTestCaseInDocker(
 	case <-inputWaitCtx.Done():
 		fmt.Fprintf(os.Stderr, "Warning: Timed out waiting for input writing goroutine to finish for container %s\n", containerID)
 	}
-	inputWaitCancel() // Ensure cancel is called
+	inputWaitCancel()
 
 	return finalResult, finalOutput, finalErrMsg
 }

@@ -27,6 +27,7 @@ func main() {
 	r.Use(auth.Middleware)
 	fs := http.FileServer(http.Dir(config.StaticRouterDir))
 	r.PathPrefix(config.StaticRouter).Handler(http.StripPrefix(config.StaticRouter, fs))
+	r.HandleFunc("/internalapi/judge/{id:[0-9]+}", api.ServerJudgeHandler)
 	r.HandleFunc("/", handler.WelcomeHandler)
 	r.HandleFunc("/login", handler.LoginHandler)
 	r.HandleFunc("/signUp", handler.SignUpHandler)
@@ -47,6 +48,7 @@ func main() {
 	s.HandleFunc("/questions", api.QuestionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE", "POST")
 	s.HandleFunc("/questions/{id}/publish", api.PublishQuestionHandler).Methods("PUT", "POST")
+	s.HandleFunc("/questions/{id}/testcase", api.TestCaseHandler).Methods("GET")
 
 	s.HandleFunc("/submissions", api.SubmissionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/submissions/{id}", api.SubmissionHandler).Methods("GET")

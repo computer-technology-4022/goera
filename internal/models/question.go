@@ -20,8 +20,15 @@ type Question struct {
 	Tags        string       `json:"tags"`        // Question tags
 	TimeLimit   int          `json:"timeLimit"`   // Time limit (in milliseconds)
 	MemoryLimit int          `json:"memoryLimit"` // Memory limit (in megabytes)
-	ExampleInput string `json:"exampleInput"`
-	ExampleOutput string `json:"exmapleOutput"`
+	TestCases   []TestCase   `json:"testCases" gorm:"foreignKey:QuestionID"`
+}
+
+type TestCase struct {
+	gorm.Model
+	QuestionID     uint     `json:"questionId"`
+	Question       Question `json:"-" gorm:"foreignKey:QuestionID"`
+	Input          string   `json:"input"`
+	ExpectedOutput string   `json:"expectedOutput"`
 }
 
 func MigrateQuestion(db *gorm.DB) error {
@@ -29,5 +36,19 @@ func MigrateQuestion(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
+	err = db.AutoMigrate(&TestCase{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func MigrateTestCase(db *gorm.DB) error {
+	err := db.AutoMigrate(&TestCase{})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

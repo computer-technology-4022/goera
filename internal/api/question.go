@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -87,6 +88,15 @@ func PublishQuestionHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPut, http.MethodPost:
 		publishQuestion(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func TestCaseHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		getTestCasesByQuestionID(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -294,17 +304,14 @@ func createQuestion(w http.ResponseWriter, r *http.Request) {
 	}
 
 	question := models.Question{
-		Title:         questionReq.Title,
-		Content:       questionReq.Content,
-		UserID:        userID,
-		Published:     false,
-		TimeLimit:     questionReq.TimeLimit,
-		MemoryLimit:   questionReq.MemoryLimit,
-		Tags:          questionReq.Tags,
-		ExampleInput:  questionReq.SampleInputs[0],
-		ExampleOutput: questionReq.SampleOutputs[0],
+		Title:       questionReq.Title,
+		Content:     questionReq.Content,
+		UserID:      userID,
+		Published:   false,
+		TimeLimit:   questionReq.TimeLimit,
+		MemoryLimit: questionReq.MemoryLimit,
+		Tags:        questionReq.Tags,
 	}
-
 	db := database.GetDB()
 	if db == nil {
 		log.Println("Database connection is nil")
@@ -317,6 +324,26 @@ func createQuestion(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Database error: %v", dbResult.Error)
 		http.Error(w, "Failed to create question", http.StatusInternalServerError)
 		return
+	}
+
+	var testCases []models.TestCase
+	for i := range questionReq.SampleInputs {
+		if i < len(questionReq.SampleOutputs) {
+			testCase := models.TestCase{
+				QuestionID:     question.ID,
+				Input:          questionReq.SampleInputs[i],
+				ExpectedOutput: questionReq.SampleOutputs[i],
+			}
+			testCases = append(testCases, testCase)
+		}
+	}
+
+	if len(testCases) > 0 {
+		if err := db.Create(&testCases).Error; err != nil {
+			log.Printf("Failed to create test cases: %v", err)
+			http.Error(w, "Failed to create test cases", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	log.Printf("Question created successfully with ID: %d", question.ID)
@@ -350,6 +377,7 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 		formReq.Title = r.FormValue("title")
 		formReq.Content = r.FormValue("content")
 
+		// Parse time limit
 		if timeLimitStr := r.FormValue("time_limit_ms"); timeLimitStr != "" {
 			timeLimit, err := strconv.Atoi(timeLimitStr)
 			if err != nil {
@@ -358,6 +386,7 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 			formReq.TimeLimit = timeLimit
 		}
 
+		// Parse memory limit
 		if memoryLimitStr := r.FormValue("memory_limit_mb"); memoryLimitStr != "" {
 			memoryLimit, err := strconv.Atoi(memoryLimitStr)
 			if err != nil {
@@ -366,11 +395,18 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 			formReq.MemoryLimit = memoryLimit
 		}
 
+		// Collect sample inputs and outputs
 		formReq.SampleInputs = r.Form["sample_inputs[]"]
 		formReq.SampleOutputs = r.Form["sample_outputs[]"]
 
+		// Validate input and output pairs
+		if len(formReq.SampleInputs) != len(formReq.SampleOutputs) {
+			return nil, fmt.Errorf("number of sample inputs and outputs must match")
+		}
+
 		formReq.Tags = r.FormValue("tags")
 
+		// Validate required fields
 		if formReq.Title == "" || formReq.Content == "" {
 			return nil, fmt.Errorf("title and content are required")
 		}
@@ -402,27 +438,37 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Start a transaction
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	var question models.Question
-	dbResult := db.First(&question, id)
-	if dbResult.Error != nil {
-		if dbResult.Error == gorm.ErrRecordNotFound {
+	if err := tx.First(&question, id).Error; err != nil {
+		tx.Rollback()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			http.Error(w, "Question not found", http.StatusNotFound)
 		} else {
-			log.Printf("Database error: %v", dbResult.Error)
+			log.Printf("Database error: %v", err)
 			http.Error(w, "Failed to retrieve question", http.StatusInternalServerError)
 		}
 		return
 	}
 
 	var user models.User
-	dbResult = db.First(&user, userID)
-	if dbResult.Error != nil {
-		log.Printf("Database error: %v", dbResult.Error)
+	if err := tx.First(&user, userID).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Database error: %v", err)
 		http.Error(w, "Failed to retrieve user", http.StatusInternalServerError)
 		return
 	}
 
+	// Check permissions
 	if question.UserID != userID && user.Role != models.AdminRole {
+		tx.Rollback()
 		if utils.IsFormRequest(r) {
 			http.Redirect(w, r, fmt.Sprintf("/question/%d", question.ID), http.StatusSeeOther)
 			return
@@ -431,21 +477,75 @@ func updateQuestion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Update question fields
 	question.Title = questionReq.Title
 	question.Content = questionReq.Content
 	question.TimeLimit = questionReq.TimeLimit
 	question.MemoryLimit = questionReq.MemoryLimit
 	question.Tags = questionReq.Tags
 
-	// Update example fields if provided
-	if len(questionReq.SampleInputs) > 0 && len(questionReq.SampleOutputs) > 0 {
-		question.ExampleInput = questionReq.SampleInputs[0]
-		question.ExampleOutput = questionReq.SampleOutputs[0]
+	// Handle publishing if the user is an admin
+	if user.Role == models.AdminRole {
+		// Assume form includes 'published' field; adjust as needed
+		if publishedStr := r.FormValue("published"); publishedStr != "" {
+			published, err := strconv.ParseBool(publishedStr)
+			if err != nil {
+				tx.Rollback()
+				http.Error(w, "Invalid published value", http.StatusBadRequest)
+				return
+			}
+			question.Published = published
+			if published {
+				now := time.Now()
+				question.PublishedAt = &now
+				question.PublishedBy = &user.ID
+			} else {
+				question.PublishedAt = nil
+				question.PublishedBy = nil
+			}
+		}
 	}
 
-	dbResult = db.Save(&question)
-	if dbResult.Error != nil {
-		log.Printf("Database error: %v", dbResult.Error)
+	// Save the question
+	if err := tx.Save(&question).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Database error: %v", err)
+		http.Error(w, "Failed to update question", http.StatusInternalServerError)
+		return
+	}
+
+	// Delete existing test cases
+	if err := tx.Where("question_id = ?", question.ID).Delete(&models.TestCase{}).Error; err != nil {
+		tx.Rollback()
+		log.Printf("Failed to delete test cases: %v", err)
+		http.Error(w, "Failed to update test cases", http.StatusInternalServerError)
+		return
+	}
+
+	// Create new test cases
+	var testCases []models.TestCase
+	for i := range questionReq.SampleInputs {
+		testCase := models.TestCase{
+			QuestionID:     question.ID,
+			Input:          questionReq.SampleInputs[i],
+			ExpectedOutput: questionReq.SampleOutputs[i],
+		}
+		testCases = append(testCases, testCase)
+	}
+
+	if len(testCases) > 0 {
+		if err := tx.Create(&testCases).Error; err != nil {
+			tx.Rollback()
+			log.Printf("Failed to create test cases: %v", err)
+			http.Error(w, "Failed to create test cases", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Commit transaction
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		log.Printf("Failed to commit transaction: %v", err)
 		http.Error(w, "Failed to update question", http.StatusInternalServerError)
 		return
 	}
@@ -637,6 +737,41 @@ func publishQuestion(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(question); err != nil {
+		log.Printf("JSON encoding error: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+	}
+}
+
+func getTestCasesByQuestionID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	questionID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid question ID", http.StatusBadRequest)
+		return
+	}
+
+	db := database.GetDB()
+	if db == nil {
+		log.Println("Database connection is nil")
+		http.Error(w, "Database connection error", http.StatusInternalServerError)
+		return
+	}
+
+	var testCases []models.TestCase
+	result := db.Where("question_id = ?", questionID).Find(&testCases)
+	if result.Error != nil {
+		log.Printf("Database error: %v", result.Error)
+		http.Error(w, "Failed to retrieve test cases", http.StatusInternalServerError)
+		return
+	}
+
+	if len(testCases) == 0 {
+		http.Error(w, "No test cases found for this question", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(testCases); err != nil {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}

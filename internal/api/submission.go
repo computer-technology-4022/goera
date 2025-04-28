@@ -1,7 +1,10 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,6 +22,16 @@ type SubmissionRequest struct {
 	Code       string `json:"code"`
 	Language   string `json:"language"`
 	QuestionID uint   `json:"questionId"`
+}
+
+type PendingSubmission struct {
+	QuestionID  uint              `json:"questionId"`
+	SourceCode  string            `json:"sourceCode"`
+	TestCases   []models.TestCase `json:"testCases"`
+	TimeLimit   string            `json:"timeLimit"`
+	MemoryLimit string            `json:"memoryLimit"`
+	CPUCount    string            `json:"cpuCount"`
+	DockerImage string            `json:"dockerImage"`
 }
 
 // SubmissionsHandler handles all requests to /api/submissions
@@ -177,7 +190,6 @@ func getSubmissionByID(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// createSubmission creates a new submission
 func createSubmission(w http.ResponseWriter, r *http.Request) {
 	var submissionReq SubmissionRequest
 	if err := json.NewDecoder(r.Body).Decode(&submissionReq); err != nil {
@@ -199,9 +211,8 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the question exists
 	var question models.Question
-	result := db.First(&question, submissionReq.QuestionID)
+	result := db.Preload("TestCases").First(&question, submissionReq.QuestionID)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			http.Error(w, "Question not found", http.StatusNotFound)
@@ -209,6 +220,13 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Database error: %v", result.Error)
 			http.Error(w, "Failed to retrieve question", http.StatusInternalServerError)
 		}
+		return
+	}
+
+	// Validate test cases
+	if len(question.TestCases) == 0 {
+		log.Printf("No test cases found for question ID %d", submissionReq.QuestionID)
+		http.Error(w, "Question has no test cases", http.StatusBadRequest)
 		return
 	}
 
@@ -230,7 +248,59 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Queue the submission for judging if there's a judge service
+	// Prepare submission for judge service
+	pendingSubmission := PendingSubmission{
+		QuestionID:  submission.ID,
+		SourceCode:  submission.Code,
+		TestCases:   question.TestCases,
+		TimeLimit:   fmt.Sprintf("%dms", question.TimeLimit),
+		MemoryLimit: fmt.Sprintf("%d", question.MemoryLimit),
+		CPUCount:    "1.0",
+		DockerImage: "go-judge-runner:latest",
+	}
+
+	// Log test cases for debugging
+	log.Printf("Test cases for question ID %d: %+v", submissionReq.QuestionID, question.TestCases)
+
+	// Send submission to judge service
+	payload, err := json.Marshal(pendingSubmission)
+	if err != nil {
+		log.Printf("Failed to marshal judge submission: %v", err)
+		http.Error(w, "Failed to prepare submission for judging", http.StatusInternalServerError)
+		return
+	}
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/submit", bytes.NewReader(payload))
+	if err != nil {
+		log.Printf("Failed to create judge request: %v", err)
+		http.Error(w, "Failed to send submission to judge", http.StatusInternalServerError)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed to send submission to judge: %v", err)
+		http.Error(w, "Judge service unavailable", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Judge service error: %d %s", resp.StatusCode, string(body))
+		http.Error(w, fmt.Sprintf("Judge service rejected submission: %s", string(body)), http.StatusInternalServerError)
+		return
+	}
+
+	// Update submission status to Judging
+	submission.JudgeStatus = models.Judging
+	result = db.Save(&submission)
+	if result.Error != nil {
+		log.Printf("Failed to update submission status: %v", result.Error)
+		// Note: We don't fail the request here since the judge has accepted it
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

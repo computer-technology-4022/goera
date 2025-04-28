@@ -16,53 +16,71 @@
   <body class="body">
     <div class="sidebar">
       <h1 class="sidebar-logo"><span style="color: #ff6308">Go</span>era</h1>
-      <ul class="sidebar-nav" style="position: relative;">
+      <ul class="sidebar-nav" style="position: relative">
         <li><a href="/questions">Problems</a></li>
         <li><a href="/submissions">Submissions</a></li>
         <li><a href="/profile/{{.CurrentUserID}}">Profile</a></li>
         <li><a href="/createQuestion">Create Question</a></li>
-        <li><a href="/api/logout" style="color: #ff6308; position: absolute; bottom: 30px; left: 0;">Logout</a></li>
+        <li>
+          <a
+            href="/api/logout"
+            style="color: #ff6308; position: absolute; bottom: 30px; left: 0"
+            >Logout</a
+          >
+        </li>
       </ul>
     </div>
 
     <div class="admin_options">
       {{if and .IsAdmin .IsPublished}}
       <form method="POST" action="/api/questions/{{.QuestionID}}/publish">
-        <input type="hidden" name="published" value="false">
-        <button type="submit" class="primary_button">
-          UnPublish
-        </button>
+        <input type="hidden" name="published" value="false" />
+        <button type="submit" class="primary_button">UnPublish</button>
       </form>
-      {{end}}
-      {{if and .IsAdmin (not .IsPublished)}}
+      {{end}} {{if and .IsAdmin (not .IsPublished)}}
       <form method="POST" action="/api/questions/{{.QuestionID}}/publish">
-        <input type="hidden" name="published" value="true">
-        <button type="submit" class="primary_button">
-          Publish
-        </button>
+        <input type="hidden" name="published" value="true" />
+        <button type="submit" class="primary_button">Publish</button>
       </form>
-      {{end}}
-      {{if or .IsAdmin .IsOwner}}
+      {{end}} {{if or .IsAdmin .IsOwner}}
       <a href="/edit/{{.QuestionID}}">
-        <button class="primary_button">
-          Edit
-        </button>
+        <button class="primary_button">Edit</button>
       </a>
       {{end}}
     </div>
 
     {{if .ErrorMessage}}
-    <div class="error_message" style="color: #ff3333; text-align: center; margin: 10px auto; padding: 10px; max-width: 600px; background-color: #ffeeee; border-radius: 5px;">
+    <div
+      class="error_message"
+      style="
+        color: #ff3333;
+        text-align: center;
+        margin: 10px auto;
+        padding: 10px;
+        max-width: 600px;
+        background-color: #ffeeee;
+        border-radius: 5px;
+      "
+    >
       {{.ErrorMessage}}
     </div>
-    {{end}}
-    
-    {{if .SuccessMessage}}
-    <div class="success_message" style="color: #006600; text-align: center; margin: 10px auto; padding: 10px; max-width: 600px; background-color: #eeffee; border-radius: 5px;">
+    {{end}} {{if .SuccessMessage}}
+    <div
+      class="success_message"
+      style="
+        color: #006600;
+        text-align: center;
+        margin: 10px auto;
+        padding: 10px;
+        max-width: 600px;
+        background-color: #eeffee;
+        border-radius: 5px;
+      "
+    >
       {{.SuccessMessage}}
     </div>
     {{end}}
-    
+
     <div
       class="home_container_2"
       style="height: fit-content; padding-top: 45px; padding-bottom: 45px"
@@ -73,9 +91,7 @@
       <!-- Question Statement -->
       <div class="question_section">
         <h3 class="section_title">Statement</h3>
-        <p class="section_content">
-          {{.Statement}}
-        </p>
+        <p class="section_content">{{.Statement}}</p>
       </div>
 
       <!-- Time Limit -->
@@ -93,8 +109,7 @@
       <!-- Input -->
       <div class="question_section">
         <h3 class="section_title">Input</h3>
-        <pre class="section_content code_block">{{.ExampleInput}}</pre
-        >
+        <pre class="section_content code_block">{{.ExampleInput}}</pre>
       </div>
 
       <!-- Expected Output -->
@@ -112,15 +127,66 @@
             id="solutionFile"
             name="solutionFile"
             class="file_input"
-            accept=".cpp,.java,.py,.js,.psd"
+            accept=".go"
             required
           />
-          <button class="primary_button">
-            Submit
-          </button>
+          <button class="primary_button">Submit</button>
         </form>
       </div>
-
     </div>
   </body>
+  <script>
+    document
+      .getElementById("uploadForm")
+      .addEventListener("submit", async function (event) {
+        event.preventDefault(); 
+
+        const fileInput = document.getElementById("solutionFile");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          alert("Please select a file!");
+          return;
+        }
+
+        if (file.type !== "text/plain" && !file.name.endsWith(".go")) {
+          alert("Only .go files are allowed!");
+          return;
+        }
+
+        const pathParts = window.location.pathname.split("/");
+
+        const questionId = parseInt(pathParts[pathParts.length - 1], 10);
+
+        console.log(questionId); 
+
+        try {
+          const code = await file.text(); 
+          const submission = {
+            code: code,
+            language: "go",
+            questionId: questionId,
+          };
+          const response = await fetch("/api/submissions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(submission),
+          });
+          if (response.ok) {
+            const responseData = await response.json();
+            console.log("Submission successful:", responseData);
+            alert("Submission successful!");
+          } else {
+            const errorData = await response.text();
+            console.error("Submission failed:", errorData);
+            alert("Submission failed!");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          alert("Something went wrong!");
+        }
+      });
+  </script>
 </html>

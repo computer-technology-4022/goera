@@ -26,7 +26,7 @@ type SubmissionRequest struct {
 }
 
 type PendingSubmission struct {
-	QuestionID  uint              `json:"questionId"`
+	SubmissionID  uint              `json:"submissionId"`
 	SourceCode  string            `json:"sourceCode"`
 	TestCases   []models.TestCase `json:"testCases"`
 	TimeLimit   string            `json:"timeLimit"`
@@ -251,7 +251,7 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare submission for judge service
 	pendingSubmission := PendingSubmission{
-		QuestionID:  submission.ID,
+		SubmissionID:  submission.ID,
 		SourceCode:  submission.Code,
 		TestCases:   question.TestCases,
 		TimeLimit:   fmt.Sprintf("%dms", question.TimeLimit),
@@ -260,10 +260,6 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 		DockerImage: "go-judge-runner:latest",
 	}
 
-	// Log test cases for debugging
-	log.Printf("Test cases for question ID %d: %+v", submissionReq.QuestionID, question.TestCases)
-
-	// Send submission to judge service
 	payload, err := json.Marshal(pendingSubmission)
 	if err != nil {
 		log.Printf("Failed to marshal judge submission: %v", err)

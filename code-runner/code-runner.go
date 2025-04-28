@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -92,8 +91,6 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(req.TestCases)
-
 	// Create temporary .go file for source code
 	tmpSrc, err := os.CreateTemp("", "source-*.go")
 	if err != nil {
@@ -167,7 +164,6 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		Output:     output,
 	}
 
-	fmt.Println(resp)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -184,20 +180,17 @@ func main() {
 	}
 }
 
-// runJudge contains the core judging logic (adapted from CLI).
 func runJudge(config JudgeConfig) (Result, string, error) {
 	var outputBuf bytes.Buffer
 	logWriter := io.MultiWriter(os.Stdout, &outputBuf)
 	fmt.Fprintln(logWriter, "Initialized judge configuration")
 
-	// Use in-memory test cases
 	testCases := config.TestCases
 	fmt.Fprintf(logWriter, "Loaded %d test cases.\n", len(testCases))
 	if len(testCases) == 0 {
 		fmt.Fprintln(logWriter, "Warning: No test cases provided.")
 	}
 
-	// Initialize Docker client
 	apiClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		fmt.Fprintf(logWriter, "Failed to create Docker client: %v\n", err)

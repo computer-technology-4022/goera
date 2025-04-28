@@ -23,9 +23,9 @@ const (
 )
 
 type RunResponse struct {
-	QuestionID uint   `json:"questionId"`
-	Status     Result `json:"status"`
-	Output     string `json:"output"`
+	SubmissionID uint   `json:"submissionId"`
+	Status       Result `json:"status"`
+	Output       string `json:"output"`
 }
 
 type TestCase struct {
@@ -34,12 +34,13 @@ type TestCase struct {
 }
 
 type PendingSubmission struct {
-	SourceCode  string     `json:"sourceCode"`
-	TestCases   []TestCase `json:"testCases"`
-	TimeLimit   string     `json:"timeLimit"`
-	MemoryLimit string     `json:"memoryLimit"`
-	CPUCount    string     `json:"cpuCount"`
-	DockerImage string     `json:"dockerImage"`
+	SubmissionID uint       `json:"submissionId"`
+	SourceCode   string     `json:"sourceCode"`
+	TestCases    []TestCase `json:"testCases"`
+	TimeLimit    string     `json:"timeLimit"`
+	MemoryLimit  string     `json:"memoryLimit"`
+	CPUCount     string     `json:"cpuCount"`
+	DockerImage  string     `json:"dockerImage"`
 }
 
 var (
@@ -50,7 +51,6 @@ var (
 
 func main() {
 	http.HandleFunc("/submit", submitHandler)
-	http.HandleFunc("/runner-done", runnerDoneHandler)
 
 	log.Println("Judge service running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -68,7 +68,7 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println(sub.TestCases)
+	log.Printf("ID=%v", sub.SubmissionID)
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -86,15 +86,9 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Submission accepted"))
 }
 
-func runnerDoneHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Invalid method", http.StatusMethodNotAllowed)
-		return
-	}
-
+func runnerDoneHandler() {
 	mu.Lock()
 	defer mu.Unlock()
-
 	if len(queue) > 0 {
 		next := queue[0]
 		queue = queue[1:]
@@ -105,8 +99,6 @@ func runnerDoneHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("No more submissions. Code-Runner now idle.")
 		busy = false
 	}
-
-	w.WriteHeader(http.StatusOK)
 }
 
 func processSubmission(sub *PendingSubmission) {
@@ -116,18 +108,16 @@ func processSubmission(sub *PendingSubmission) {
 		return
 	}
 	log.Printf("Code-Runner response: result=%v\n", result.Status)
+	runnerDoneHandler()
 
-	// Prepare the request to the internal API
-	apiURL := fmt.Sprintf("http://localhost:5000/internalapi/judge/%d", result.QuestionID)
+	apiURL := fmt.Sprintf("http://localhost:5000/internalapi/judge/%d", sub.SubmissionID)
 
-	// Create the request body
 	requestBody, err := json.Marshal(result)
 	if err != nil {
 		log.Printf("Error marshaling result: %v\n", err)
 		return
 	}
 
-	// Create and send the HTTP request
 	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(requestBody))
 	if err != nil {
 		log.Printf("Error creating request: %v\n", err)
@@ -143,7 +133,6 @@ func processSubmission(sub *PendingSubmission) {
 	}
 	defer resp.Body.Close()
 
-	// Check the response status
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		log.Printf("Internal API returned non-OK status: %d, body: %s\n", resp.StatusCode, string(body))

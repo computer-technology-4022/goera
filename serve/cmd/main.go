@@ -23,11 +23,14 @@ func main() {
 	}
 	defer database.CloseDB()
 
-	r := mux.NewRouter()
+	gg := mux.NewRouter()
+
+	gg.HandleFunc("/internalapi/judge/{id:[0-9]+}", api.ServerJudgeHandler)
+	gg.Use(auth.InternalAuthMiddleware)
+	r := gg.NewRoute().Subrouter()
 	r.Use(auth.Middleware)
 	fs := http.FileServer(http.Dir(config.StaticRouterDir))
 	r.PathPrefix(config.StaticRouter).Handler(http.StripPrefix(config.StaticRouter, fs))
-	r.HandleFunc("/internalapi/judge/{id:[0-9]+}", api.ServerJudgeHandler)
 	r.HandleFunc("/", handler.WelcomeHandler)
 	r.HandleFunc("/login", handler.LoginHandler)
 	r.HandleFunc("/signUp", handler.SignUpHandler)

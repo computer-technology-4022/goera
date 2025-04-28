@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -26,13 +27,13 @@ type SubmissionRequest struct {
 }
 
 type PendingSubmission struct {
-	SubmissionID  uint              `json:"submissionId"`
-	SourceCode  string            `json:"sourceCode"`
-	TestCases   []models.TestCase `json:"testCases"`
-	TimeLimit   string            `json:"timeLimit"`
-	MemoryLimit string            `json:"memoryLimit"`
-	CPUCount    string            `json:"cpuCount"`
-	DockerImage string            `json:"dockerImage"`
+	SubmissionID uint              `json:"submissionId"`
+	SourceCode   string            `json:"sourceCode"`
+	TestCases    []models.TestCase `json:"testCases"`
+	TimeLimit    string            `json:"timeLimit"`
+	MemoryLimit  string            `json:"memoryLimit"`
+	CPUCount     string            `json:"cpuCount"`
+	DockerImage  string            `json:"dockerImage"`
 }
 
 // SubmissionsHandler handles all requests to /api/submissions
@@ -251,13 +252,13 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 
 	// Prepare submission for judge service
 	pendingSubmission := PendingSubmission{
-		SubmissionID:  submission.ID,
-		SourceCode:  submission.Code,
-		TestCases:   question.TestCases,
-		TimeLimit:   fmt.Sprintf("%dms", question.TimeLimit),
-		MemoryLimit: fmt.Sprintf("%d", question.MemoryLimit),
-		CPUCount:    "1.0",
-		DockerImage: "go-judge-runner:latest",
+		SubmissionID: submission.ID,
+		SourceCode:   submission.Code,
+		TestCases:    question.TestCases,
+		TimeLimit:    fmt.Sprintf("%dms", question.TimeLimit),
+		MemoryLimit:  fmt.Sprintf("%d", question.MemoryLimit),
+		CPUCount:     "1.0",
+		DockerImage:  "go-judge-runner:latest",
 	}
 
 	payload, err := json.Marshal(pendingSubmission)
@@ -274,6 +275,8 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	apiKey := os.Getenv("INTERNAL_API_KEY")
+	req.Header.Set("X-API-Key", apiKey)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -124,6 +125,8 @@ func processSubmission(sub *PendingSubmission) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	apiKey := os.Getenv("INTERNAL_API_KEY")
+	req.Header.Set("X-API-Key", apiKey)
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -154,6 +157,8 @@ func sendToCodeRunner(sub *PendingSubmission) (*RunResponse, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	apiKey := os.Getenv("INTERNAL_API_KEY")
+	req.Header.Set("X-API-Key", apiKey)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

@@ -171,5 +171,6 @@ func sendToCodeRunner(sub *Submission) (*RunResponse, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, err
 	}
+
 	return &result, nil
 }

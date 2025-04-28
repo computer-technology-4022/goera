@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -164,7 +165,6 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		Output:     output,
 	}
 
-
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
@@ -172,11 +172,33 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/run", runHandler)
-	addr := ":8081"
-	fmt.Printf("CodeRunner service listening on %s\n", addr)
-	if err := http.ListenAndServe(addr, nil); err != nil {
-		fmt.Printf("Server error: %v\n", err)
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: coderunner <command> [options]")
+		fmt.Println("Commands:")
+		fmt.Println("  serve    Start the code runner server")
+		os.Exit(1)
+	}
+
+	switch os.Args[1] {
+	case "serve":
+		serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
+		listenAddr := serveCmd.String("listen", "8081", "Port to listen on (e.g., 8081 or :8081)")
+		serveCmd.Parse(os.Args[2:])
+
+		addr := *listenAddr
+		if !strings.Contains(addr, ":") {
+			addr = ":" + addr
+		}
+
+		http.HandleFunc("/run", runHandler)
+		fmt.Printf("CodeRunner service listening on %s\n", addr)
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			fmt.Printf("Server error: %v\n", err)
+			os.Exit(1)
+		}
+	default:
+		fmt.Printf("Unknown command: %s\n", os.Args[1])
+		os.Exit(1)
 	}
 }
 

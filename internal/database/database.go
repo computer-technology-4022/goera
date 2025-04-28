@@ -61,6 +61,7 @@ func InitDB() error {
 		"Question":   models.MigrateQuestion,
 		"User":       models.MigrateUser,
 		"Submission": models.MigrateSubmission,
+		"TestCase": models.MigrateTestCase,
 	}
 	for name, migrateFunc := range migrations {
 		if err := migrateFunc(DB); err != nil {

@@ -20,7 +20,6 @@ const (
 	CompilationError    JudgeStatus = "compilation_error"     // Compilation error
 )
 
-// Submission represents a code submission in the system
 type Submission struct {
 	gorm.Model
 	Code           string      `json:"code"`           // Submitted code

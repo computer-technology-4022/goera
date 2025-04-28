@@ -47,6 +47,7 @@ func main() {
 	s.HandleFunc("/questions", api.QuestionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/questions/{id}", api.QuestionHandler).Methods("GET", "PUT", "DELETE", "POST")
 	s.HandleFunc("/questions/{id}/publish", api.PublishQuestionHandler).Methods("PUT", "POST")
+	s.HandleFunc("/questions/{id}/testcase", api.TestCaseHandler).Methods("GET")
 
 	s.HandleFunc("/submissions", api.SubmissionsHandler).Methods("GET", "POST")
 	s.HandleFunc("/submissions/{id}", api.SubmissionHandler).Methods("GET")

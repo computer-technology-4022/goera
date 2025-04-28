@@ -199,7 +199,6 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check if the question exists
 	var question models.Question
 	result := db.First(&question, submissionReq.QuestionID)
 	if result.Error != nil {
@@ -232,10 +231,12 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Queue the submission for judging if there's a judge service
 
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(submission); err != nil {
 		log.Printf("JSON encoding error: %v", err)
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 	}
+
 }

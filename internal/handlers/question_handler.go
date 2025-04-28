@@ -36,7 +36,16 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 	apiPath := fmt.Sprintf("/api/questions/%s", id)
 	apiClient := utils.GetAPIClient()
 	var question models.Question
-	err := apiClient.Get(r, apiPath,&question)
+	err := apiClient.Get(r, apiPath, &question)
+	if err != nil {
+		log.Printf("Error fetching questions: %v", err)
+		http.Error(w, "Failed to fetch questions", http.StatusInternalServerError)
+		return
+	}
+
+	apiPath2 := fmt.Sprintf("/api/questions/%s/testcase", id)
+	var testCases []models.TestCase
+	err = apiClient.Get(r, apiPath2, &testCases)
 	if err != nil {
 		log.Printf("Error fetching questions: %v", err)
 		http.Error(w, "Failed to fetch questions", http.StatusInternalServerError)
@@ -76,9 +85,10 @@ func QuestionHandler(w http.ResponseWriter, r *http.Request) {
 		QuestionID:     question.ID,
 		ErrorMessage:   errorMessage,
 		SuccessMessage: successMessage,
-		ExampleInput:   question.ExampleInput,
-		ExampleOutput:  question.ExampleOutput,
+		ExampleInput:   testCases[0].Input,
+		ExampleOutput:  testCases[0].ExpectedOutput,
 	}
+
 	userID, exists := auth.UserIDFromContext(r.Context())
 	if exists {
 		data.CurrentUserID = userID

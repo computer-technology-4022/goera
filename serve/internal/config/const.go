@@ -19,22 +19,32 @@ func Init() {
 	DBName = getEnv("DB_NAME", DBName)
 	DBPort = getEnv("DB_PORT", DBPort)
 	DBSSLMode = getEnv("DB_SSL_MODE", DBSSLMode)
+	
+	// Set default server port if not already set
+	if ServerPort == "" {
+		ServerPort = ":5000"
+	}
 }
 
 const (
-	ServerPort      = ":5000"
 	StaticRouterDir = "web/static"
 	StaticRouter    = "/static/"
 )
 
 var (
-	DBHost     = "localhost"
-	DBUser     = "goera_user"
-	DBPassword = ""
-	DBName     = "goera"
-	DBPort     = "5432"
-	DBSSLMode  = "disable"
+	ServerPort      = ":5000"
+	DBHost          = "localhost"
+	DBUser          = "goera_user"
+	DBPassword      = ""
+	DBName          = "goera"
+	DBPort          = "5432"
+	DBSSLMode       = "disable"
 )
+
+// SetServerPort updates the server port
+func SetServerPort(port string) {
+	ServerPort = port
+}
 
 var ProtectedPrefixes = []string{
 	"/questions",

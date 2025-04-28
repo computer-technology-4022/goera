@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"goera/serve/internal/api"
 	"goera/serve/internal/auth"
@@ -9,13 +10,45 @@ import (
 	handler "goera/serve/internal/handlers"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Usage: serve <command> [options]")
+		fmt.Println("Commands:")
+		fmt.Println("  serve    Start the server")
+		os.Exit(1)
+	}
 
+	switch os.Args[1] {
+	case "serve":
+		serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
+		listenAddr := serveCmd.String("listen", "5000", "Port to listen on (e.g., 5000 or :5000)")
+		serveCmd.Parse(os.Args[2:])
+
+		addr := *listenAddr
+		if !strings.Contains(addr, ":") {
+			addr = ":" + addr
+		}
+
+		runServer(addr)
+
+	default:
+		fmt.Printf("Unknown command: %s\n", os.Args[1])
+		os.Exit(1)
+	}
+}
+
+func runServer(port string) {
 	config.Init()
+	
+	// Update the configured port after config initialization
+	config.SetServerPort(port)
+	
 	err := database.InitDB()
 	if err != nil {
 		log.Fatal(err)
@@ -54,6 +87,6 @@ func main() {
 	s.HandleFunc("/submissions/{id}", api.SubmissionHandler).Methods("GET")
 
 	http.Handle("/", r)
-	fmt.Println("Server is running on http://localhost:5000")
+	fmt.Printf("Server is running on http://localhost%s\n", config.ServerPort)
 	http.ListenAndServe(config.ServerPort, nil)
-}
+} 

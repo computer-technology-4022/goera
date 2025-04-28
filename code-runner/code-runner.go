@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -52,94 +53,73 @@ const (
 	RuntimeError Result = "RuntimeError"
 )
 
-// JudgeConfig holds the configuration for the judging process.
 type JudgeConfig struct {
 	TimeLimitPerCase time.Duration
 	MemoryLimitMB    uint64
 	CPUCount         float64
 	DockerImageName  string
 	SourceFilePath   string
-	TestCasesPath    string
+	TestCases        []TestCase
+}
+
+type SubmissionRequest struct {
+	QuestionID  uint       `json:"questionId"`
+	SourceCode  string     `json:"sourceCode"`
+	TestCases   []TestCase `json:"testCases"`
+	TimeLimit   string     `json:"timeLimit"`
+	MemoryLimit string     `json:"memoryLimit"`
+	CPUCount    string     `json:"cpuCount"`
+	DockerImage string     `json:"dockerImage"`
 }
 
 const DEFAULT_DOCKER_IMAGE = "go-judge-runner:latest"
 
-// RunResponse matches the judge service's expected response.
 type RunResponse struct {
-	Success bool   `json:"success"`
-	Output  string `json:"output"`
+	QuestionID uint   `json:"questionId"`
+	Status     Result `json:"status"`
+	Output     string `json:"output"`
 }
 
-// runHandler handles POST /run and runs the judging logic.
 func runHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Parse multipart form to get uploaded files and parameters
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		http.Error(w, "Failed to parse multipart form", http.StatusBadRequest)
+	var req SubmissionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	// Handle Go source file upload
-	srcFile, _, err := r.FormFile("source")
-	if err != nil {
-		http.Error(w, "Missing source file", http.StatusBadRequest)
-		return
-	}
-	defer srcFile.Close()
+	log.Println(req.TestCases)
+
+	// Create temporary .go file for source code
 	tmpSrc, err := os.CreateTemp("", "source-*.go")
 	if err != nil {
 		http.Error(w, "Failed to create temp file for source", http.StatusInternalServerError)
 		return
 	}
 	defer os.Remove(tmpSrc.Name())
-	defer tmpSrc.Close()
-	if _, err := io.Copy(tmpSrc, srcFile); err != nil {
-		http.Error(w, "Failed to save source file", http.StatusInternalServerError)
+	if _, err := tmpSrc.WriteString(req.SourceCode); err != nil {
+		http.Error(w, "Failed to write source code", http.StatusInternalServerError)
 		return
 	}
+	tmpSrc.Close()
 
-	// Handle testcases JSON upload
-	testFile, _, err := r.FormFile("testcases")
-	if err != nil {
-		http.Error(w, "Missing testcases file", http.StatusBadRequest)
-		return
-	}
-	defer testFile.Close()
-	tmpTest, err := os.CreateTemp("", "testcases-*.json")
-	if err != nil {
-		http.Error(w, "Failed to create temp file for test cases", http.StatusInternalServerError)
-		return
-	}
-	defer os.Remove(tmpTest.Name())
-	defer tmpTest.Close()
-	if _, err := io.Copy(tmpTest, testFile); err != nil {
-		http.Error(w, "Failed to save testcases file", http.StatusInternalServerError)
-		return
-	}
-
-	// Read optional form values
-	timeLimitStr := r.FormValue("timeLimit")
-	memoryLimitStr := r.FormValue("memoryLimit")
-	cpuCountStr := r.FormValue("cpuCount")
-	dockerImage := r.FormValue("dockerImage")
-
-	// Parse parameters
-	timeLimit, err := time.ParseDuration(timeLimitStr)
-	if err != nil && timeLimitStr != "" {
+	// Parse configuration
+	timeLimit, err := time.ParseDuration(req.TimeLimit)
+	if err != nil && req.TimeLimit != "" {
 		http.Error(w, "Invalid timeLimit format", http.StatusBadRequest)
 		return
 	}
-	if timeLimitStr == "" {
+	if req.TimeLimit == "" {
 		timeLimit = 2 * time.Second // Default
 	}
 
 	var memoryLimit uint64
-	if memoryLimitStr != "" {
-		_, err := fmt.Sscanf(memoryLimitStr, "%d", &memoryLimit)
+	if req.MemoryLimit != "" {
+		_, err := fmt.Sscanf(req.MemoryLimit, "%d", &memoryLimit)
 		if err != nil {
 			http.Error(w, "Invalid memoryLimit format", http.StatusBadRequest)
 			return
@@ -149,8 +129,8 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var cpuCount float64
-	if cpuCountStr != "" {
-		_, err := fmt.Sscanf(cpuCountStr, "%f", &cpuCount)
+	if req.CPUCount != "" {
+		_, err := fmt.Sscanf(req.CPUCount, "%f", &cpuCount)
 		if err != nil {
 			http.Error(w, "Invalid cpuCount format", http.StatusBadRequest)
 			return
@@ -159,6 +139,7 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		cpuCount = 1.0 // Default
 	}
 
+	dockerImage := req.DockerImage
 	if dockerImage == "" {
 		dockerImage = DEFAULT_DOCKER_IMAGE // Default
 	}
@@ -170,7 +151,7 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		CPUCount:         cpuCount,
 		DockerImageName:  dockerImage,
 		SourceFilePath:   tmpSrc.Name(),
-		TestCasesPath:    tmpTest.Name(),
+		TestCases:        req.TestCases, // Direct test cases
 	}
 
 	// Run the judging logic
@@ -180,11 +161,13 @@ func runHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Prepare response
 	resp := RunResponse{
-		Success: result == Accepted,
-		Output:  output,
+		QuestionID: req.QuestionID,
+		Status:     result,
+		Output:     output,
 	}
+
+	fmt.Println(resp)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -203,21 +186,15 @@ func main() {
 
 // runJudge contains the core judging logic (adapted from CLI).
 func runJudge(config JudgeConfig) (Result, string, error) {
-	// Initialize output buffer to capture logs
 	var outputBuf bytes.Buffer
 	logWriter := io.MultiWriter(os.Stdout, &outputBuf)
 	fmt.Fprintln(logWriter, "Initialized judge configuration")
-	fmt.Fprintf(logWriter, "Loading test cases from: %s\n", config.TestCasesPath)
 
-	// Load test cases
-	testCases, err := loadTestCasesFromFile(config.TestCasesPath)
-	if err != nil {
-		fmt.Fprintf(logWriter, "Error loading test cases: %v\n", err)
-		return RuntimeError, outputBuf.String(), err
-	}
+	// Use in-memory test cases
+	testCases := config.TestCases
 	fmt.Fprintf(logWriter, "Loaded %d test cases.\n", len(testCases))
 	if len(testCases) == 0 {
-		fmt.Fprintln(logWriter, "Warning: No test cases loaded. Judge will finish without running tests.")
+		fmt.Fprintln(logWriter, "Warning: No test cases provided.")
 	}
 
 	// Initialize Docker client
@@ -240,11 +217,8 @@ func runJudge(config JudgeConfig) (Result, string, error) {
 	fmt.Fprintln(logWriter, "Docker image built successfully.")
 
 	// Compile source code
-	fmt.Fprintf(logWriter, "Judging source file: %s\n", config.SourceFilePath)
-	fmt.Fprintln(logWriter, "Compiling source code on the host...")
 	executablePath, compileLog, err := compileProgram(config.SourceFilePath)
 	if err != nil {
-		fmt.Fprintf(logWriter, "Result: %s\n", CompileError)
 		fmt.Fprintf(logWriter, "Compilation Log:\n%s\n", compileLog)
 		return CompileError, outputBuf.String(), err
 	}

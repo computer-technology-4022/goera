@@ -6,29 +6,44 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
-	"os"
 	"sync"
+	"time"
 )
 
-type Submission struct {
-	SourcePath    string `json:"sourcePath"`
-	TestcasesPath string `json:"testcasesPath"`
-	TimeLimit     string `json:"timeLimit"`
-	MemoryLimit   string `json:"memoryLimit"`
-	CPUCount      string `json:"cpuCount"`
-	DockerImage   string `json:"dockerImage"`
-}
+type Result string
+
+const (
+	Accepted     Result = "Accepted"
+	CompileError Result = "CompileError"
+	WrongAnswer  Result = "WrongAnswer"
+	MemoryLimit  Result = "MemoryLimit"
+	TimeLimit    Result = "TimeLimit"
+	RuntimeError Result = "RuntimeError"
+)
 
 type RunResponse struct {
-	// Define fields based on what code-runner returns
-	Success bool   `json:"success"`
-	Output  string `json:"output"`
+	QuestionID uint   `json:"questionId"`
+	Status     Result `json:"status"`
+	Output     string `json:"output"`
+}
+
+type TestCase struct {
+	Input          string `json:"input"`
+	ExpectedOutput string `json:"expectedOutput"`
+}
+
+type PendingSubmission struct {
+	SourceCode  string     `json:"sourceCode"`
+	TestCases   []TestCase `json:"testCases"`
+	TimeLimit   string     `json:"timeLimit"`
+	MemoryLimit string     `json:"memoryLimit"`
+	CPUCount    string     `json:"cpuCount"`
+	DockerImage string     `json:"dockerImage"`
 }
 
 var (
-	queue []*Submission
+	queue []*PendingSubmission
 	mu    sync.Mutex
 	busy  bool
 )
@@ -47,11 +62,13 @@ func submitHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var sub Submission
+	var sub PendingSubmission
 	if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
+
+	log.Println(sub.TestCases)
 
 	mu.Lock()
 	defer mu.Unlock()
@@ -92,69 +109,62 @@ func runnerDoneHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func processSubmission(sub *Submission) {
+func processSubmission(sub *PendingSubmission) {
 	result, err := sendToCodeRunner(sub)
 	if err != nil {
 		log.Printf("Error sending to Code-Runner: %v\n", err)
-		// Optionally handle retries or failure scenarios here
 		return
 	}
-	log.Printf("Code-Runner response: success=%v, output=%s\n", result.Success, result.Output)
+	log.Printf("Code-Runner response: result=%v\n", result.Status)
+
+	// Prepare the request to the internal API
+	apiURL := fmt.Sprintf("http://localhost:5000/internalapi/judge/%d", result.QuestionID)
+
+	// Create the request body
+	requestBody, err := json.Marshal(result)
+	if err != nil {
+		log.Printf("Error marshaling result: %v\n", err)
+		return
+	}
+
+	// Create and send the HTTP request
+	req, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(requestBody))
+	if err != nil {
+		log.Printf("Error creating request: %v\n", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error sending request to internal API: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Check the response status
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		log.Printf("Internal API returned non-OK status: %d, body: %s\n", resp.StatusCode, string(body))
+		return
+	}
+
+	log.Println("Successfully sent result to internal API")
+
 }
 
-func sendToCodeRunner(sub *Submission) (*RunResponse, error) {
-	var buf bytes.Buffer
-	writer := multipart.NewWriter(&buf)
+func sendToCodeRunner(sub *PendingSubmission) (*RunResponse, error) {
+	payload, err := json.Marshal(sub)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal submission: %w", err)
+	}
 
-	// Attach source file
-	srcFile, err := os.Open(sub.SourcePath)
+	req, err := http.NewRequest("POST", "http://localhost:8081/run", bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}
-	defer srcFile.Close()
-	partSrc, err := writer.CreateFormFile("source", sub.SourcePath)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := io.Copy(partSrc, srcFile); err != nil {
-		return nil, err
-	}
-
-	// Attach testcases file
-	testFile, err := os.Open(sub.TestcasesPath)
-	if err != nil {
-		return nil, err
-	}
-	defer testFile.Close()
-	partTest, err := writer.CreateFormFile("testcases", sub.TestcasesPath)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := io.Copy(partTest, testFile); err != nil {
-		return nil, err
-	}
-
-	// Optional fields
-	if sub.TimeLimit != "" {
-		writer.WriteField("timeLimit", sub.TimeLimit)
-	}
-	if sub.MemoryLimit != "" {
-		writer.WriteField("memoryLimit", sub.MemoryLimit)
-	}
-	if sub.CPUCount != "" {
-		writer.WriteField("cpuCount", sub.CPUCount)
-	}
-	if sub.DockerImage != "" {
-		writer.WriteField("dockerImage", sub.DockerImage)
-	}
-
-	writer.Close()
-
-	req, err := http.NewRequest("POST", "http://localhost:8081/run", &buf)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

@@ -568,7 +568,7 @@ func processSubmission(sub *PendingSubmission, port int) {
 	}
 	log.Printf("Code-Runner on port %d response: result=%v\n", port, result.Status)
 
-	apiURL := fmt.Sprintf("http://localhost:5000/internalapi/judge/%d", sub.SubmissionID)
+	apiURL := fmt.Sprintf("http://serve:5000/internalapi/judge/%d", sub.SubmissionID)
 
 	requestBody, err := json.Marshal(result)
 	if err != nil {

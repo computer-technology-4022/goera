@@ -1,20 +1,33 @@
 version: "3.8"
 
 services:
+  # This service runs both the judge server and the code-runner.
+  # The command to run both is specified directly here for clarity,
+  # assuming the necessary executables ('judge') are built by the Dockerfile.
   judge:
     build:
+      # Assuming the Dockerfile and Go source for judge/code-runner
+      # are in a directory named 'judge' relative to docker-compose.yml
       context: ./judge
       dockerfile: Dockerfile
-    command: ["./judge", "serve", "--listen", "8080"]
+    # Command to start both the code-runner (in background) and the judge server.
+    # Ensure your 'judge' executable can handle these subcommands.
+    # Use 'exec' to replace the shell process with your application process,
+    # which is generally better practice for init processes in containers.
+    privileged: true # Use with caution, grants extended privileges
     ports:
-      - "8080:8080"
+      - "8080:8080" # Exposes the judge server API
     environment:
-      INTERNAL_API_KEY: value
+      # Example: How the code-runner or other services might find the judge API.
+      # Replace with your actual environment variables.
+      JUDGE_API_URL: http://judge:8080
+      INTERNAL_API_KEY: value # Keep necessary env vars
+      # Add any other env vars your judge or code-runner needs
     depends_on:
       db:
-        condition: service_healthy
-      serve:
-        condition: service_started
+        condition: service_healthy # Ensure the database is ready before starting
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
 
   serve:
     build:
@@ -23,10 +36,17 @@ services:
     ports:
       - "5000:5000"
     environment:
-      PORT: "5000"
-      INTERNAL_API_KEY: asd
-      DB_URL: "postgres://postgres:example@db:5432/app?sslmode=disable"
+      PORT: 5000
+      JUDGE_API_URL: http://judge:8080
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: example
+      DB_NAME: app
+      DB_SSLMODE: disable
     depends_on:
+      judge:
+        condition: service_started
       db:
         condition: service_healthy
 
@@ -34,17 +54,23 @@ services:
     image: postgres:15
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
+      POSTGRES_PASSWORD: example # Use Docker secrets in production
       POSTGRES_DB: app
     volumes:
+      # Persist database data outside the container
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      # Map host port 5433 to container port 5432 to avoid conflicts
+      # if port 5432 is used on the host. Remove this mapping if not needed.
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      # Check if the database is accepting connections to the specified database
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app"]
+      interval: 5s # Check every 5 seconds
+      timeout: 5s # Wait up to 5 seconds for a response
+      retries: 5 # Retry up to 5 times before marking as unhealthy
+      start_period: 10s # Wait 10 seconds before starting health checks
 
 volumes:
+  # Define the named volume for PostgreSQL data persistence
   postgres_data:

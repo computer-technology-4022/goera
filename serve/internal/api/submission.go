@@ -268,7 +268,7 @@ func createSubmission(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req, err := http.NewRequest("POST", "http://localhost:8080/submit", bytes.NewReader(payload))
+	req, err := http.NewRequest("POST", "http://judge:8080/submit", bytes.NewReader(payload))
 	if err != nil {
 		log.Printf("Failed to create judge request: %v", err)
 		http.Error(w, "Failed to send submission to judge", http.StatusInternalServerError)

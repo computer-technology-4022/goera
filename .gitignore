@@ -28,5 +28,5 @@ go.work.sum
 .VSCodeCounter
 
 # Sh files
-# *.sh
+*.sh
 README_POSTGRES.md

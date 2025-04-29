@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Submissions - Goera</title>
+    <link rel="stylesheet" href="/static/stylesheets/index.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Boldonse&family=Unbounded:wght@200..900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="body">
+    <div class="sidebar">
+      <h1 class="sidebar-logo"><span style="color: #ff6308">Go</span>era</h1>
+      <ul class="sidebar-nav" style="position: relative;">
+        <li><a href="/questions">Problems</a></li>
+        <li><a href="/submissions">Submissions</a></li>
+        <li><a href="/profile/{{.CurrentUserID}}">Profile</a></li>
+        <li><a href="/createQuestion">Create Question</a></li>
+        <li><a href="/api/logout" style="color: #ff6308; position: absolute; bottom: 30px; left: 0;">Logout</a></li>
+      </ul>
+    </div>
+    <div class="home_container" style="height: fit-content;">
+      <h1 class="home_heading">
+        <span style="color: #ff6308">My</span> Submissions
+      </h1>
+
+      <!-- Submissions List -->
+      <div class="submissions_container">
+        {{range .Submissions}}
+        <div class="submission_card">
+          <div class="submission_info">
+            <h3 class="question_title"><span style="">{{.QuestionName}}</span>
+            <span class="submission_date">{{.SubmissionTime.Format "2006-01-02 15:04"}}</span>
+          </div>
+          <span class="status {{.JudgeStatus | statusToClass}}">
+            {{.JudgeStatus | statusToString}}
+          </span>
+        </div>
+        {{end}}
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        {{if gt .Page 1}}
+        <a href="/submissions?page={{sub .Page 1}}">
+          <button class="pagination_button">Previous</button>
+        </a>
+        {{else}}
+        <button class="pagination_button" disabled>Previous</button>
+        {{end}}
+
+        <span class="current_page">
+          Page {{.Page}} of {{.TotalPages}} 
+          (Showing {{if eq .TotalItems 0}}0{{else}}{{add (mul (sub .Page 1) .PageSize) 1}}{{end}}
+          - {{min (mul .Page .PageSize) .TotalItems}} 
+          of {{.TotalItems}} submissions)
+        </span>
+
+        {{if lt .Page .TotalPages}}
+        <a href="/submissions?page={{add .Page 1}}">
+          <button class="pagination_button">Next</button>
+        </a>
+        {{else}}
+        <button class="pagination_button" disabled>Next</button>
+        {{end}}
+      </div>
+    </div>
+  </body>
+</html>

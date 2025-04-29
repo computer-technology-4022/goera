@@ -1,0 +1,4 @@
+GET http://localhost:5000/api/questions
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxMywiaXNzIjoieW91ci1hcGkiLCJleHAiOjE3NDY0NjY0NDAsIm5iZiI6MTc0NTg2MTY0MCwiaWF0IjoxNzQ1ODYxNjQwfQ.IXn98GXEMPbmy8qMrAXpMz3WEQ9ALx8-rjSBTNgFvDY
+Content-Type: application/json
+

@@ -1,4 +1,9 @@
-FROM golang:latest
+FROM docker:28-dind
+
+
+RUN apk add --no-cache go
+
+
 
 # Set up Go environment (optional but good practice)
 

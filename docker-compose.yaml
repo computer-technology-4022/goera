@@ -26,8 +26,8 @@ services:
     depends_on:
       db:
         condition: service_healthy # Ensure the database is ready before starting
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    # volumes:
+    #   - /var/run/docker.sock:/var/run/docker.sock
 
   serve:
     build:
